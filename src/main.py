@@ -33,9 +33,7 @@ class Generator(object):
         return np.random.choice(modalites,
                                 self.size,
                                 p=proba)
-    
-    
-
+                                
 if __name__ == '__main__':
     size_test = 1000
     test = Generator(size_test)
