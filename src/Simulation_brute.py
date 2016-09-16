@@ -124,21 +124,7 @@ effectif_to_ratio(reference_activite, 'proba_activite', 'effectif', 'valeur')
 #    tab_output[column_output][cond_output] = tab_output[column_input]/ int(sum(tab_ref['valeur'][cond_ref]))
 reference_activite['proba_activite'] = pd.to_numeric(reference_activite['proba_activite'])
 
-
-# TODO: faire des asserts
-
-population['classe_age'] = ''
-
-def get_classe_age(tab, colname, name, age_inf, age_sup):
-    '''
-    Adjoint une colonne our indiquer la classe d'àge (string)'
-    '''
-    cond = (tab['age'] >= age_inf) & (tab['age'] <= age_sup)
-    tab[colname][cond] = name
-
-
-for idx, row in reference_activite.iterrows():
-    get_classe_age(population, 'classe_age', row['classe_age'], int(row['age_inf']), int(row['age_sup']))
+population = get_classes_age(population, 'age', classe_ages)
 
 population_activite = population.copy()
 
@@ -153,7 +139,8 @@ population['activite'] = np.random.binomial(1, population_activite['proba_activi
 ratio_des_effectifs = pd.DataFrame(population[population['activite'] == 1].groupby(['sexe', 'classe_age', 'activite']).size()).reset_index()
 ratio_des_effectifs.rename(columns={0: 'effectif_genere'}, inplace=True)
 
-ratio_des_effectifs['effectif_reference'] = round((reference_activite[reference_activite['age_inf'] != 0]['effectif'] * sample_size) / nbr_population_totale).astype(int).reset_index(drop=True)
+## bug here # TODO:
+ratio_des_effectifs['effectif_reference'] = round((reference_activite['effectif'] * sample_size) / nbr_population_totale).astype(int).reset_index(drop=True)
 
 ratio = ratio_des_effectifs['effectif_genere']/ratio_des_effectifs['effectif_reference']
 print(ratio.describe())
