@@ -106,15 +106,9 @@ def effectif_to_ratio(tab_output, column_output, column_subject, column_ref):
     '''
     tab_output[column_output] = tab_output[column_subject] / tab_output[column_ref]
 
-xxx
-reference_activite
-for idx, row in reference_activite.iterrows():
-    ajout_effectif_reference(reference_activite, effectifs_age_sexe, 'effectif_reference', 'femme', int(row['age_inf']), int(row['age_sup']))
-    ajout_effectif_reference(reference_activite, effectifs_age_sexe, 'effectif_reference', 'homme', int(row['age_inf']), int(row['age_sup']))
-
-
 reference_activite['proba_activite'] = ''
-effectif_to_ratio(reference_activite, 'proba_activite', 'effectif', 'effectif_reference')
+effectif_to_ratio(reference_activite, 'proba_activite', 'effectif', 'valeur')
+
 
 # def proba(tab_output, tab_ref, column_output, column_input, sexe, age_inf, age_sup):
 #    '''
