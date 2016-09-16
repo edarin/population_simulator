@@ -59,6 +59,7 @@ nbr_population_active = sum(reference_activite['effectif'])
 classe_ages = reference_activite['classe_age'].str.replace(' ans', '')
 max_age = effectifs_age_sexe['age'].max()
 classe_ages = classe_ages.str.replace(' ou plus', '-' + str(max_age))
+reference_activite['classe_age'] = classe_ages
 
 def get_classes_age(tab, age_col, classes):
     ''' ajoute une colonne à tab contenant la classe d'age
@@ -81,15 +82,22 @@ effectifs_age_sexe = get_classes_age(effectifs_age_sexe,
                                      classe_ages)
 
 ##### reference_activite : création de la colonne proba_activite
-reference_activite['effectif_reference'] = ''
 
-
-def ajout_effectif_reference(tab_output, tab_ref, column_output, sexe, age_inf, age_sup):
+def ajout_effectif_reference(tab_init, tab_ref, col_ref, groupby):
     '''
     Ajoute à la table d'intérêt l'effectif de référence 
     '''
-    cond_output = (tab_output.age_inf == age_inf) & (tab_output.sexe == sexe)
-    tab_output[column_output][cond_output] = int(sum(tab_ref['valeur'][cond_ref]))
+    assert all(tab_init.groupby(groupby).size() == 1)
+    reference = tab_ref.groupby(groupby)[col_ref].sum()
+    reference = reference.reset_index()
+    output = tab_init.merge(reference, on=groupby, how='left')
+    return output
+
+reference_activite = ajout_effectif_reference(reference_activite,
+                                              effectifs_age_sexe,
+                                              'valeur',
+                                              ['sexe', 'classe_age'])
+print(reference_activite)
 
 
 def effectif_to_ratio(tab_output, column_output, column_subject, column_ref):
@@ -99,6 +107,7 @@ def effectif_to_ratio(tab_output, column_output, column_subject, column_ref):
     tab_output[column_output] = tab_output[column_subject] / tab_output[column_ref]
 
 xxx
+reference_activite
 for idx, row in reference_activite.iterrows():
     ajout_effectif_reference(reference_activite, effectifs_age_sexe, 'effectif_reference', 'femme', int(row['age_inf']), int(row['age_sup']))
     ajout_effectif_reference(reference_activite, effectifs_age_sexe, 'effectif_reference', 'homme', int(row['age_inf']), int(row['age_sup']))
