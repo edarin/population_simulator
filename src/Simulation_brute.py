@@ -1,8 +1,4 @@
-
 # coding: utf-8
-
-
-
 import random
 import numpy as np
 import pandas as pd
@@ -11,11 +7,9 @@ from numpy.testing import assert_almost_equal
 # ### Génération Table Population
 from generation import generate_population
 
-
-
 sample_size = 10000
 
-# ### Sexe et Age
+##### Sexe et Age
 #
 # Issu de données INSEE 2016
 
@@ -23,12 +17,19 @@ sample_size = 10000
 effectifs_age_sexe = pd.read_csv("data/demographie/pop_age_sexe_2016.csv")
 del effectifs_age_sexe['total']
 
-effectif = effectifs_age_sexe.set_index('age_revolu').unstack()
-effectif.index.names = ['sexe', 'age']
-marges = effectif/effectif.sum()
+effectifs_age_sexe = pd.melt(effectifs_age_sexe, id_vars=['age'],
+                             value_vars=['femme', 'homme'], var_name ='sexe',
+                             value_name='valeur')   
+nbr_population_totale = effectifs_age_sexe['valeur'].sum()
+                             
+def get_proba(tab, col):
+    div = tab[col]/tab[col].sum()
+    return div
+
+marges = get_proba(effectifs_age_sexe.set_index(['sexe', 'age']), 'valeur')                                                       
+marges = effectifs_age_sexe.set_index(['sexe', 'age'])['valeur'] / effectifs_age_sexe.set_index(['age', 'sexe'])['valeur'].sum()
 
 population = generate_population(marges, sample_size)
-
 
 #### test de la probabilité
 
@@ -37,270 +38,114 @@ effectifs_generes = pd.DataFrame(population.groupby(['sexe', 'age']).size()).res
 effectifs_generes.rename(columns={0: 'valeur'}, inplace=True)
 effectifs_generes['marges_generees'] = effectifs_generes['valeur']/effectifs_generes['valeur'].sum()
 
-ratio_des_marges = effectifs_generes.merge(pd.DataFrame(marges).reset_index())
-ratio_des_marges.rename(columns={0: 'marges_ref'}, inplace=True)
+marges_ref = pd.DataFrame(marges).reset_index() #transforme en df pour le merge
+marges_ref.rename(columns={'valeur': 'marges_ref'}, inplace=True)
 
-xx
-
+ratio_des_marges = effectifs_generes.merge(marges_ref)
 ratio = ratio_des_marges['marges_generees']/ratio_des_marges['marges_ref']
-ratio.describe()
-
+print(ratio.describe())
 
 ######### Activité
 
 ### reference_activite: lecture de la table de référence
 reference_activite = pd.read_csv("data/demographie/activite.csv")
-reference_activite = pd.melt(reference_activite, id_vars=['pop_active'],
+reference_activite = pd.melt(reference_activite, id_vars=['classe_age'],
                              value_vars=['femme', 'homme'], var_name = 'sexe',
-                             value_name='activite')
+                             value_name='effectif')
 
-reference_activite['activite'] *= 1000
-effectif_population_active = sum(reference_activite['activite'])
-print("Effectif de la population active", effectif_population_active)
-
-
+reference_activite['effectif'] *= 1000
+nbr_population_active = sum(reference_activite['effectif'])
 ##### reference_activite : création colonne age_inf et age_sup
-classe_ages = reference_activite['pop_active'].str.replace(' ans', '')
-max_age = reference_sexe.age.max()
+classe_ages = reference_activite['classe_age'].str.replace(' ans', '')
+max_age = effectifs_age_sexe['age'].max()
 classe_ages = classe_ages.str.replace(' ou plus', '-' + str(max_age))
 reference_activite['age_inf'] = classe_ages.str.split('-').str[0].astype(int)
 reference_activite['age_sup'] = classe_ages.str.split('-').str[1].astype(int)
 
 
-
-
 ##### reference_activite : création de la colonne proba_activite
+reference_activite['effectif_total'] = ''
 
-reference_activite['proba_activite'] = ''
-
-def proba(tab_output, tab_ref, column_output, column_input, sexe, age_inf, age_sup):
+def ajout_effectif_reference(tab_output, tab_ref, column_output, sexe, age_inf, age_sup):
     '''
-    Crée la probabilité d'un évènement (ex: être actif)
-    Entrée : nombre d'occurences de cet événèment par catégorie ('tab_output')
-    Opération : soustraire cette somme par le total de la population correspondante
-    -> avoir une table de référence ('tab_ref')
-
-    Définition des catégories : cond_ref et cond_output
+    Ajoute à la table d'intérêt l'effectif de référence 
     '''
-    cond_ref = (tab_ref['age'] >= age_inf) & (tab_ref['age'] <= age_sup)
+    cond_ref = (tab_ref['age'] >= age_inf) & (tab_ref['age'] <= age_sup) & (tab_ref.sexe == sexe)
     cond_output = (tab_output.age_inf == age_inf) & (tab_output.sexe == sexe)
-    tab_output[column_output][cond_output] = tab_output[column_input]/ int(sum(tab_ref[sexe][cond_ref]))
-    return tab_output
+    tab_output[column_output][cond_output] = int(sum(tab_ref['valeur'][cond_ref]))
 
 
-def de_effectif_a_ratio(tab1, tab2):
-
-
-    return output
-
-effectif_classe_age
-de_effectif_a_ratio(effectif_classe_age, reference_activite[['pop_active','classe_age','sexe']])
+def effectif_to_ratio(tab_output, column_output, column_subject, column_total):
+    '''
+    Crée la probabilité en divisant l'effectif de la variable d'intérêt par l'effectif total
+    '''
+    tab_output[column_output] = tab_output[column_subject] / tab_output[column_total]
 
 
 for idx, row in reference_activite.iterrows():
-    proba(reference_activite, effectifs_age_sexe, 'proba_activite', 'activite', 'femme', int(row['age_inf']), int(row['age_sup']) )
-    proba(reference_activite, reference_sexe, 'proba_activite', 'activite', 'homme', int(row['age_inf']), int(row['age_sup']) )
+    ajout_effectif_reference(reference_activite, effectifs_age_sexe, 'effectif_total', 'femme', int(row['age_inf']), int(row['age_sup']))
+    ajout_effectif_reference(reference_activite, effectifs_age_sexe, 'effectif_total', 'homme', int(row['age_inf']), int(row['age_sup']))
 
+
+reference_activite['proba_activite'] = ''
+effectif_to_ratio(reference_activite, 'proba_activite', 'effectif', 'effectif_total')
+
+# def proba(tab_output, tab_ref, column_output, column_input, sexe, age_inf, age_sup):
+#    '''
+#    Crée la probabilité d'un évènement (ex: être actif)
+#    Entrée : nombre d'occurences de cet événèment par catégorie ('tab_output')
+#    Opération : soustraire cette somme par le total de la population correspondante
+#    -> avoir une table de référence ('tab_ref')
+#
+#    Définition des catégories : cond_ref et cond_output
+#    '''
+#    cond_ref = (tab_ref['age'] >= age_inf) & (tab_ref['age'] <= age_sup) & (tab_ref.sexe == sexe)
+#    cond_output = (tab_output.age_inf == age_inf) & (tab_output.sexe == sexe)
+#    tab_output[column_output][cond_output] = tab_output[column_input]/ int(sum(tab_ref['valeur'][cond_ref]))
 reference_activite['proba_activite'] = pd.to_numeric(reference_activite['proba_activite'])
 
 
 # TODO: faire des asserts
 
-population_activite = population.copy()
+population['classe_age'] = ''
 
-
-population_activite['pop_active'] =''
 def get_classe_age(tab, colname, name, age_inf, age_sup):
+    '''
+    Adjoint une colonne our indiquer la classe d'àge (string)'
+    '''
     cond = (tab['age'] >= age_inf) & (tab['age'] <= age_sup)
     tab[colname][cond] = name
 
 
 for idx, row in reference_activite.iterrows():
-    get_classe_age(population_activite, 'pop_active', row['pop_active'], int(row['age_inf']), int(row['age_sup']))
+    get_classe_age(population, 'classe_age', row['classe_age'], int(row['age_inf']), int(row['age_sup']))
+
+population_activite = population.copy()
 
 
 population_activite = population_activite.merge(reference_activite, how='left')
 
 population['activite'] = ''
 population['activite'] = np.random.binomial(1, population_activite['proba_activite'])
+xx
+##
+reference_activite['effectif_echantillon'] = round((reference_activite['effectif'] * sample_size) / nbr_population_totale).astype(int)
 
+
+ratio_des_effectifs = pd.DataFrame(population[population['activite'] == 1].groupby(['sexe', 'classe_age', 'activite']).size()).reset_index()
+ratio_des_effectifs.rename(columns={0: 'effectif_genere'}, inplace=True)
+
+ratio_des_effectifs['effectif_reference'] = round((reference_activite[reference_activite['age_inf'] != 0]['effectif'] * sample_size) / nbr_population_totale).astype(int)
+
+ratio_des_marges = effectifs_generes.merge(effectif_ref_activite)
+ratio = ratio_des_marges['marges_generees']/ratio_des_marges['marges_ref']
+print(ratio.describe())
 xx
 
+## Vérifier que le tirage se rapproche de la réalité
 
-#reference_activite['variable'] = reference_activite[['pop_active', 'sexe']].apply(lambda x: ''.join(x), axis=1)
-#est-ce nécssaire de joindre les deux colonnes ? -> je pense pas
 
-assert (sum(reference_activite.activite[:8])) == effectif_population_active, "Vérifier que la somme est bien égale à l'effectif de la population active"
-reference_activite
 
-
-##pour les femmes, force brute
-#reference_activite.loc[0, 'proportion_echantillon'] = len(population[(population['age'] >= 15) & (population['age'] < 24) & (population['sexe'] ==0)])
-#reference_activite.loc[1, 'proportion_echantillon'] = len(population[(population['age'] >= 24) & (population['age'] < 49) & (population['sexe'] ==0)])
-#reference_activite.loc[2, 'proportion_echantillon'] = len(population[(population['age'] >= 50) & (population['age'] < 64) & (population['sexe'] ==0)])
-#reference_activite.loc[3, 'proportion_echantillon'] = len(population[population['age'] >= 65 & (population['sexe'] ==0)])
-##pour les hommes, force brute
-#reference_activite.loc[4, 'proportion_echantillon'] = len(population[(population['age'] >= 15) & (population['age'] < 24) & (population['sexe'] ==1)])
-#reference_activite.loc[5, 'proportion_echantillon'] = len(population[(population['age'] >= 24) & (population['age'] < 49) & (population['sexe'] ==1)])
-#reference_activite.loc[6, 'proportion_echantillon'] = len(population[(population['age'] >= 50) & (population['age'] < 64) & (population['sexe'] ==1)])
-#reference_activite.loc[7, 'proportion_echantillon'] = len(population[population['age'] >= 65 & (population['sexe'] ==1)])
-
-
-reference_activite['proportion_echantillon'] = reference_activite['proportion_echantillon'].astype(int)
-reference_activite
-
-
-# In[57]:
-
-#pour les femmes, force brute
-reference_activite.loc[0, 'pop_totale'] = sum(reference_sexe[(reference_sexe['age'] >= 15) & (reference_sexe['age'] < 24)].femme)
-reference_activite.loc[1, 'pop_totale'] = sum(reference_sexe[(reference_sexe['age'] >= 24) & (reference_sexe['age'] < 49)].femme)
-reference_activite.loc[2, 'pop_totale'] = sum(reference_sexe[(reference_sexe['age'] >= 50) & (reference_sexe['age'] < 64)].femme)
-reference_activite.loc[3, 'pop_totale'] = sum(reference_sexe[reference_sexe['age'] >= 65].femme)
-#pour les hommes, force brute
-reference_activite.loc[4, 'pop_totale'] = sum(reference_sexe[(reference_sexe['age'] >= 15) & (reference_sexe['age'] < 24)].homme)
-reference_activite.loc[5, 'pop_totale'] = sum(reference_sexe[(reference_sexe['age'] >= 24) & (reference_sexe['age'] < 49)].homme)
-reference_activite.loc[6, 'pop_totale'] = sum(reference_sexe[(reference_sexe['age'] >= 50) & (reference_sexe['age'] < 64)].homme)
-reference_activite.loc[7, 'pop_totale'] = sum(reference_sexe[reference_sexe['age'] >= 65].homme)
-
-reference_activite["proba_activite"] = reference_activite["activite"] / reference_activite["pop_totale"]
-reference_activite["proba_inactivite"] = 1 - reference_activite["proba_activite"]
-
-
-reference_activite
-
-
-# In[18]:
-
-#Génération population inactive jeune
-population.loc[population['age'] < 15, "activite"] = 0
-population.head(n=10)
-
-list(population.groupby(['sexe','age']))
-
-
-# In[63]:
-
-#génération femme 15-24
-indic_activite = np.arange(2)
-population.loc[(population['sexe']==0) & (population['age'] >= 15) & (population['age'] < 24), 'activite'] = np.random.choice(indic_activite, reference_activite.loc[0, 'proportion_echantillon'], list(reference_activite[['proba_activite','proba_inactivite']].loc[0]))
-population.loc[(population['sexe']==0) & (population['age'] >= 25) & (population['age'] < 49), 'activite'] = np.random.choice(indic_activite, reference_activite.loc[1, 'proportion_echantillon'], list(reference_activite[['proba_activite','proba_inactivite']].loc[1]))
-population.loc[(population['sexe']==0) & (population['age'] >= 50) & (population['age'] < 64), 'activite'] = np.random.choice(indic_activite, reference_activite.loc[2, 'proportion_echantillon'], list(reference_activite[['proba_activite','proba_inactivite']].loc[2]))
-population.loc[(population['sexe']==0) & (population['age'] >= 65), 'activite'] = np.random.choice(indic_activite, reference_activite.loc[3, 'proportion_echantillon'], list(reference_activite[['proba_activite','proba_inactivite']].loc[3]))
-
-
-# In[ ]:
-
-activite_somme = {name: sum(reference_activite[name]) for name in reference_activite.columns}
-activite_somme
-
-
-# In[ ]:
-
-liste_variable = ["femme", "homme"]
-for variable in liste_variable:
-    reference_activite["proba_{0}".format(variable)] = reference_activite[variable]/reference_activite['total']
-
-assert sum(reference_activite.proba_femme+reference_activite.proba_homme) == 4, "Ce sont des probabilités"
-# à préciser car forme proba pas explicite
-reference_activite
-
-
-# In[ ]:
-
-#Génération population inactive jeune
-population.loc[population['age'] < 15, "activite"] = 0
-population[population.age < 15].activite
-#Population inactive > 65
-population.loc[(population['age']>15) & (population['age'] < 24) & (population['sexe'] == 0), 'activite'] = 1
-
-
-# In[ ]:
-
-
-
-
-# In[68]:
-
-nbr_population_active = int(sum(reference_activite["total"]/effectif_population)*sample_size)
-nbr_population_active
-
-
-# In[ ]:
-
-nbr_population_active = int(sum(reference_activite["total"]/effectif_population)*sample_size)
-print("Effectif populaction active dans notre échantillon ", nbr_population_active)
-nbr_population_inactive = sample_size - nbr_population_active
-print("Effectif populaction inactive dans notre échantillon ", nbr_population_inactive)
-
-#Calcul de la proportion de femmes et d'hommes actifs par âge
-liste_variable = ["femme", "homme"]
-for variable in liste_variable:
-    reference_activite["proba_{0}".format(variable)] = reference_activite[variable]/sum(reference_activite[variable])
-
-assert sum(reference_activite.proba_femme) == 1, "Nous voulons une probabilité"
-assert sum(reference_activite.proba_homme) == 1, "Nous voulons une probabilité"
-
-reference_activite.head()
-
-
-# In[ ]:
-
-reference_activite.T.head()
-
-
-# In[ ]:
-
-
-
-
-# In[ ]:
-
-population.loc[(population['sexe'] == 0) & (population['age'] > 65), 'activite']
-
-
-# In[ ]:
-
-population.loc[population['sexe'] == 0 , name] = np.random.choice(ages, nbr_femme, p=table_de_reference.proba_femme)
-population.loc[population['sexe'] == 1, name] = np.random.choice(ages, nbr_homme, p=table_de_reference.proba_homme)
-
-
-# In[ ]:
-
-population.loc[(population['sexe'] == 0) & (population['age'] > 15), 'activite'] = np.random.choice(nb.arange(2), nbr_femme, p=table_de_reference.proba_femme)
-
-
-# In[ ]:
-
-
-
-
-# In[ ]:
-
-
-
-
-# In[ ]:
-
-
-
-
-# In[ ]:
-
-
-
-
-# In[ ]:
-
-
-
-
-# In[ ]:
-
-
-
-
-# In[ ]:
 
 revenus = [21820704, 503723963299] # (nbr de déclarant en case 1aj, montant total de cette case) -> 2014
 revenus_moy = revenus[1] / float(revenus[0])
