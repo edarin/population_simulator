@@ -112,7 +112,7 @@ def effectif_to_ratio(tab_output, column_output, column_subject, column_ref):
     tab_output[column_output] = tab_output[column_subject] / tab_output[column_ref]
 
 reference_activite['proba_activite'] = ''
-effectif_to_ratio(reference_activite, 'proba_activite', 'effectif', 'valeur')
+effectif_to_ratio(reference_activite, 'proba_activite', 'effectif', 'effectif_ref')
 
 population = get_classes_age(population, 'age', classe_ages)
 
