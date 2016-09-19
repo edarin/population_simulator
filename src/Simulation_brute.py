@@ -1,5 +1,4 @@
 # coding: utf-8
-import random
 import numpy as np
 import pandas as pd
 
@@ -26,9 +25,7 @@ def get_proba(tab, col):
     div = tab[col]/tab[col].sum()
     return div
 
-marges = get_proba(effectifs_age_sexe.set_index(['sexe', 'age']), 'effectif_ref')                                                       
-marges = effectifs_age_sexe.set_index(['sexe', 'age'])['effectif_ref'] / effectifs_age_sexe.set_index(['age', 'sexe'])['effectif_ref'].sum()
-
+marges = get_proba(effectifs_age_sexe.set_index(['sexe', 'age']), 'effectif_ref')                                           
 population = generate_population(marges, sample_size)
 
 #### test de la probabilité
@@ -36,7 +33,8 @@ population = generate_population(marges, sample_size)
 ## génère un dataframe avec les marges de la population générées
 effectifs_generes = pd.DataFrame(population.groupby(['sexe', 'age']).size()).reset_index()
 effectifs_generes.rename(columns={0: 'effectif_ref'}, inplace=True)
-effectifs_generes['marges_generees'] = effectifs_generes['effectif_ref']/effectifs_generes['effectif_ref'].sum()
+
+effectifs_generes['marges_generees'] = get_proba(effectifs_generes, 'effectif_ref')
 
 marges_ref = pd.DataFrame(marges).reset_index() # transforme en df pour le merge
 marges_ref.rename(columns={'effectif_ref': 'marges_ref'}, inplace=True)
@@ -134,6 +132,10 @@ ratio_des_effectifs['effectif_reference'] = round((reference_activite[reference_
 
 ratio = ratio_des_effectifs['effectif_genere']/ratio_des_effectifs['effectif_reference']
 print(ratio.describe())
+
+### Salaire
+
+
 
 #revenus = [21820704, 503723963299] # (nbr de déclarant en case 1aj, montant total de cette case) -> 2014
 #revenus_moy = revenus[1] / float(revenus[0])
