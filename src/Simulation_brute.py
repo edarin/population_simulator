@@ -5,43 +5,47 @@ import pandas as pd
 from numpy.testing import assert_almost_equal
 # ### Génération Table Population
 from generation import generate_population
+from update import check_tirage
 
 sample_size = 10000
 
-##### Sexe et Age
-#
-# Issu de données INSEE 2016
 
+def get_proba(tab, col):
+    div = tab[col]/tab[col].sum()
+    return div
+
+
+##### Sexe et Age
+# Issu de données INSEE 2016
 # À noter : âge = 100 correspond à 100 et plus
+
 effectifs_age_sexe = pd.read_csv("data/demographie/pop_age_sexe_2016.csv")
 del effectifs_age_sexe['total']
 
 effectifs_age_sexe = pd.melt(effectifs_age_sexe, id_vars=['age'],
                              value_vars=['femme', 'homme'], var_name ='sexe',
-                             value_name='effectif_ref')   
-nbr_population_totale = effectifs_age_sexe['effectif_ref'].sum()
-                             
-def get_proba(tab, col):
-    div = tab[col]/tab[col].sum()
-    return div
+                             value_name='effectif_ref')
 
-marges = get_proba(effectifs_age_sexe.set_index(['sexe', 'age']), 'effectif_ref')                                           
+nbr_population_totale = effectifs_age_sexe['effectif_ref'].sum()
+marges = get_proba(effectifs_age_sexe.set_index(['sexe', 'age']), 'effectif_ref')
+
 population = generate_population(marges, sample_size)
 
 #### test de la probabilité
 
 ## génère un dataframe avec les marges de la population générées
-effectifs_generes = pd.DataFrame(population.groupby(['sexe', 'age']).size()).reset_index()
-effectifs_generes.rename(columns={0: 'effectif_ref'}, inplace=True)
-
-effectifs_generes['marges_generees'] = get_proba(effectifs_generes, 'effectif_ref')
-
-marges_ref = pd.DataFrame(marges).reset_index() # transforme en df pour le merge
-marges_ref.rename(columns={'effectif_ref': 'marges_ref'}, inplace=True)
-
-ratio_des_marges = effectifs_generes.merge(marges_ref)
-ratio = ratio_des_marges['marges_generees']/ratio_des_marges['marges_ref']
-print(ratio.describe())
+def check_population_generation():
+    effectifs_generes = pd.DataFrame(population.groupby(['sexe', 'age']).size()).reset_index()
+    effectifs_generes.rename(columns={0: 'effectif_ref'}, inplace=True)
+    
+    effectifs_generes['marges_generees'] = get_proba(effectifs_generes, 'effectif_ref')
+    
+    marges_ref = pd.DataFrame(marges).reset_index() # transforme en df pour le merge
+    marges_ref.rename(columns={'effectif_ref': 'marges_ref'}, inplace=True)
+    
+    ratio_des_marges = effectifs_generes.merge(marges_ref)
+    ratio = ratio_des_marges['marges_generees']/ratio_des_marges['marges_ref']
+    print(ratio.describe())
 
 ######### Activité
 
@@ -55,7 +59,7 @@ reference_activite['effectif'] *= 1000
 nbr_population_active = sum(reference_activite['effectif'])
 ##### reference_activite : création colonne age_inf et age_sup
 
-# Note : classe-age est bien les classes d'ages utilisées dans la table activité 
+# Note : classe-age est bien les classes d'ages utilisées dans la table activité
 #       -> pas nécessairement universel
 
 classe_ages = reference_activite['classe_age'].str.replace(' ans', '')
@@ -67,10 +71,10 @@ def get_classes_age(tab, age_col, classes):
     ''' ajoute une colonne à tab contenant la classe d'age
         faisant référence aux catégories de la serie classes
     '''
-    assert isinstance(classe_ages, pd.Series) 
+    assert isinstance(classe_ages, pd.Series)
     assert classes.name not in tab.columns
     age = tab[age_col]
-    
+
     tab[classes.name] = ''
     for classe in classes.unique():
         age_inf = int(classe.split('-')[0])
@@ -87,7 +91,7 @@ effectifs_age_sexe = get_classes_age(effectifs_age_sexe,
 
 def ajout_effectif_reference(tab_init, tab_ref, col_ref, groupby):
     '''
-    Ajoute à la table d'intérêt l'effectif de référence 
+    Ajoute à la table d'intérêt l'effectif de référence
     '''
     assert all(tab_init.groupby(groupby).size() == 1)
     reference = tab_ref.groupby(groupby)[col_ref].sum()
@@ -114,6 +118,7 @@ effectif_to_ratio(reference_activite, 'proba_activite', 'effectif', 'effectif_re
 
 population = get_classes_age(population, 'age', classe_ages)
 
+
 population_activite = population.copy()
 
 
@@ -123,15 +128,11 @@ population['activite'] = ''
 population['activite'] = np.random.binomial(1, population_activite['proba_activite'])
 
 #### Vérifier que le tirage se rapproche de la réalité
+groupby = ['sexe', 'classe_age', 'activite']
+ratio_activite = check_tirage(population, reference_activite, groupby)
 
-ratio_des_effectifs = pd.DataFrame(population[population['activite'] == 1].groupby(['sexe', 'classe_age', 'activite']).size()).reset_index()
-ratio_des_effectifs.rename(columns={0: 'effectif_genere'}, inplace=True)
+print(ratio_activite['ratio'].describe())
 
-# Faible : il faut gérer les gens <15ans 
-ratio_des_effectifs['effectif_reference'] = round((reference_activite[reference_activite['effectif'] !=0]['effectif'] * sample_size) / nbr_population_totale).astype(int).reset_index(drop=True)
-
-ratio = ratio_des_effectifs['effectif_genere']/ratio_des_effectifs['effectif_reference']
-print(ratio.describe())
 
 ### Salaire
 
