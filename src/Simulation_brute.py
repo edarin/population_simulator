@@ -44,12 +44,9 @@ reference_activite = pd.melt(reference_activite, id_vars=['classe_age'],
 
 reference_activite['effectif'] *= 1000
 
-nbr_population_active = sum(reference_activite['effectif'])
-##### reference_activite : création colonne age_inf et age_sup
 
 # Note : classe-age est bien les classes d'ages utilisées dans la table activité
 #       -> pas nécessairement universel
-
 classes_age = reference_activite['classe_age'].str.replace(' ans', '')
 max_age = effectifs_age_sexe['age'].max()
 classes_age = classes_age.str.replace(' ou plus', '-' + str(max_age))
@@ -59,33 +56,19 @@ effectifs_age_sexe = get_classes_age(effectifs_age_sexe,
                                      'age',
                                      classes_age)
 
+
 ##### reference_activite : création de la colonne proba_activite
-
-
 reference_activite = ajout_effectif_reference(reference_activite,
                                               effectifs_age_sexe,
                                               'effectif_ref',
                                               ['sexe', 'classe_age'])
 
-
-
-def effectif_to_ratio(tab_output, column_output, column_subject, column_ref):
-    '''
-    Crée la probabilité en divisant l'effectif de la variable d'intérêt par l'effectif total
-    '''
-    tab_output[column_output] = tab_output[column_subject] / tab_output[column_ref]
-
-reference_activite['proba_activite'] = ''
-
-effectif_to_ratio(reference_activite, 'proba_activite', 'effectif', 'effectif_ref')
+reference_activite['proba_activite'] = reference_activite['effectif']/reference_activite['effectif_ref']
 
 population = get_classes_age(population, 'age', classes_age)
 population_activite = population.copy()
-
-
 population_activite = population_activite.merge(reference_activite, how='outer')
 
-population['activite'] = ''
 population['activite'] = np.random.binomial(1, population_activite['proba_activite'])
 
 # Ajout des effectifs des non actifs
@@ -96,13 +79,7 @@ reference_activite['activite'] = 1
 reference_inactivite['activite'] = 0
 reference_activite = pd.concat([reference_activite, reference_inactivite])
 
-
 #### Vérifier que le tirage se rapproche de la réalité
-#groupby = ['sexe', 'classe_age', 'activite']
-#ratio_activite = distance_to_reference(population, reference_activite, groupby)
-#
-#print(ratio_activite['ratio'].describe())
-
 ratio = distance_to_reference(population[population['activite'] == 1], reference_activite, sample_size, ['sexe', 'classe_age', 'activite'])
 ratio = distance_to_reference(population, reference_activite, sample_size,
                      ['sexe', 'classe_age', 'activite'],
@@ -111,8 +88,6 @@ ratio = distance_to_reference(population, reference_activite, sample_size,
 print(ratio['ratio'].describe())
 
 ### Salaire
-
-
 
 #revenus = [21820704, 503723963299] # (nbr de déclarant en case 1aj, montant total de cette case) -> 2014
 #revenus_moy = revenus[1] / float(revenus[0])
