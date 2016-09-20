@@ -72,3 +72,20 @@ def distance_to_reference(population_simulee, reference, sample_size, groupby,
     ratio['ratio'] = ratio['effectif_genere']/ratio['effectif_theorique']
 
     return ratio
+
+
+def from_unique_value_reference_to_standard_reference(tab, col):
+    '''
+        Lorsque l'on a une table de référence avec la répartition
+        d'une sous-population, on construit une table de référence au
+        format standard en ajoutant les effectifs complémentaire avec 
+        la variable col qui est un booléen True pour l'effectif 
+        d'orginie et False pour l'autre
+    '''
+    tab_other_value = tab.copy()
+    tab_other_value['effectif'] = tab_other_value['effectif_ref'] - tab_other_value['effectif']
+    tab_other_value['proba_activite'] = tab_other_value['effectif']/tab_other_value['effectif_ref']
+    tab['activite'] = True
+    tab_other_value['activite'] = False
+    tab = pd.concat([tab, tab_other_value])
+    return tab

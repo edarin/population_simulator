@@ -4,7 +4,8 @@ import pandas as pd
 
 from generation import generate_population
 from tools import (distance_to_reference, get_proba, get_classes_age,
-    ajout_effectif_reference)
+    ajout_effectif_reference,
+    from_unique_value_reference_to_standard_reference)
 
 sample_size_target = 10000
 
@@ -70,15 +71,11 @@ population_activite = population.copy()
 population_activite = population_activite.merge(reference_activite, how='outer')
 
 population['activite'] = np.random.binomial(1, population_activite['proba_activite'])
-
+population['activite'] = population['activite'].astype(bool)
 # Ajout des effectifs des non actifs
-reference_inactivite = reference_activite.copy()
-reference_inactivite['effectif'] = reference_inactivite['effectif_ref'] - reference_inactivite['effectif']
-reference_inactivite['proba_activite'] = reference_inactivite['effectif']/reference_inactivite['effectif_ref']
-reference_activite['activite'] = 1
-reference_inactivite['activite'] = 0
-reference_activite = pd.concat([reference_activite, reference_inactivite])
-
+reference_activite = from_unique_value_reference_to_standard_reference(
+    reference_activite,
+    'activite')
 #### Vérifier que le tirage se rapproche de la réalité
 ratio = distance_to_reference(population[population['activite'] == 1], reference_activite, sample_size, ['sexe', 'classe_age', 'activite'])
 ratio = distance_to_reference(population, reference_activite, sample_size,
