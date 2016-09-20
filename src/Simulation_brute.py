@@ -43,6 +43,7 @@ def check_population_generation():
     ratio = ratio_des_marges['marges_generees']/ratio_des_marges['marges_ref']
     print(ratio.describe())
 
+
 ######### Activité
 
 ### reference_activite: lecture de la table de référence
@@ -98,15 +99,13 @@ population['activite'] = ''
 population['activite'] = np.random.binomial(1, population_activite['proba_activite'])
 
 # Ajout des effectifs des non actifs
-
-reference_inactivite = reference_activite[reference_activite['classe_age'] != '0-14']
+reference_inactivite = reference_activite.copy()
 reference_inactivite['effectif'] = reference_inactivite['effectif_ref'] - reference_inactivite['effectif']
-reference_inactivite['proba_activite'] = 0
-reference_inactivite['effectif_ref'] = 0
+reference_inactivite['proba_activite'] = reference_inactivite['effectif']/reference_inactivite['effectif_ref']
+reference_activite['activite'] = 1
+reference_inactivite['activite'] = 0
 reference_activite = pd.concat([reference_activite, reference_inactivite])
 
-reference_activite['activite'] = 0
-reference_activite.loc[reference_activite['proba_activite'] != 0, 'activite'] = 1
 
 #### Vérifier que le tirage se rapproche de la réalité
 #groupby = ['sexe', 'classe_age', 'activite']
@@ -115,6 +114,8 @@ reference_activite.loc[reference_activite['proba_activite'] != 0, 'activite'] = 
 #print(ratio_activite['ratio'].describe())
 
 ratio = check_tirage(population[population['activite'] == 1], reference_activite, sample_size, ['sexe', 'classe_age', 'activite'])
+ratio = check_tirage(population, reference_activite, sample_size, ['sexe', 'classe_age', 'activite'])
+
 print(ratio['ratio'].describe())
 
 ### Salaire
