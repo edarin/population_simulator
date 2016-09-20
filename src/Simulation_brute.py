@@ -2,11 +2,9 @@
 import numpy as np
 import pandas as pd
 
-from numpy.testing import assert_almost_equal
-
 from generation import generate_population
-from update import check_tirage
-from tools import *
+from tools import (distance_to_reference, get_proba, get_classes_age,
+    ajout_effectif_reference)
 
 sample_size_target = 10000
 
@@ -31,9 +29,9 @@ sample_size = len(population)
 
 #### test de la génération
 
-# just a trick to use check_tirage
+# just a trick to use distance_to_reference
 effectifs_age_sexe['effectif'] = effectifs_age_sexe['effectif_ref']
-test_pop = check_tirage(population, effectifs_age_sexe, sample_size, ['age','sexe'])
+test_pop = distance_to_reference(population, effectifs_age_sexe, sample_size, ['age','sexe'])
 print(test_pop['ratio'].describe())
 
 ######### Activité
@@ -101,12 +99,12 @@ reference_activite = pd.concat([reference_activite, reference_inactivite])
 
 #### Vérifier que le tirage se rapproche de la réalité
 #groupby = ['sexe', 'classe_age', 'activite']
-#ratio_activite = check_tirage(population, reference_activite, groupby)
+#ratio_activite = distance_to_reference(population, reference_activite, groupby)
 #
 #print(ratio_activite['ratio'].describe())
 
-ratio = check_tirage(population[population['activite'] == 1], reference_activite, sample_size, ['sexe', 'classe_age', 'activite'])
-ratio = check_tirage(population, reference_activite, sample_size,
+ratio = distance_to_reference(population[population['activite'] == 1], reference_activite, sample_size, ['sexe', 'classe_age', 'activite'])
+ratio = distance_to_reference(population, reference_activite, sample_size,
                      ['sexe', 'classe_age', 'activite'],
                      nb_modalite=2)
 
