@@ -27,22 +27,14 @@ marges = get_proba(effectifs_age_sexe.set_index(['sexe', 'age']), 'effectif_ref'
 
 population = generate_population(marges, sample_size_target)
 sample_size = len(population)
-#### test de la probabilité
 
-## génère un dataframe avec les marges de la population générées
-def check_population_generation():
-    effectifs_generes = pd.DataFrame(population.groupby(['sexe', 'age']).size()).reset_index()
-    effectifs_generes.rename(columns={0: 'effectif_ref'}, inplace=True)
-    
-    effectifs_generes['marges_generees'] = get_proba(effectifs_generes, 'effectif_ref')
-    
-    marges_ref = pd.DataFrame(marges).reset_index() # transforme en df pour le merge
-    marges_ref.rename(columns={'effectif_ref': 'marges_ref'}, inplace=True)
-    
-    ratio_des_marges = effectifs_generes.merge(marges_ref)
-    ratio = ratio_des_marges['marges_generees']/ratio_des_marges['marges_ref']
-    print(ratio.describe())
 
+#### test de la génération
+
+# just a trick to use check_tirage
+effectifs_age_sexe['effectif'] = effectifs_age_sexe['effectif_ref']
+test_pop = check_tirage(population, effectifs_age_sexe, sample_size, ['age','sexe'])
+print(test_pop['ratio'].describe())
 
 ######### Activité
 

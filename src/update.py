@@ -8,7 +8,7 @@ Created on Mon Sep 19 11:54:17 2016
 import pandas as pd
 
 
-def check_tirage(population_simulee, reference,sample_size, groupby,
+def check_tirage(population_simulee, reference, sample_size, groupby,
                  nb_modalite=1):
     ''' 
         - population_simulee est la population que l'on veut tester
@@ -39,4 +39,5 @@ def check_tirage(population_simulee, reference,sample_size, groupby,
     ratio['ratio'] = ratio['effectif_genere']/ratio['effectif_theorique']
 
     return ratio
+
 
