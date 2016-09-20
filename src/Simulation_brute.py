@@ -3,16 +3,12 @@ import numpy as np
 import pandas as pd
 
 from numpy.testing import assert_almost_equal
-# ### Génération Table Population
+
 from generation import generate_population
 from update import check_tirage
+from tools import *
 
-sample_size = 10000
-
-
-def get_proba(tab, col):
-    div = tab[col]/tab[col].sum()
-    return div
+sample_size_target = 10000
 
 
 ##### Sexe et Age
@@ -29,8 +25,8 @@ effectifs_age_sexe = pd.melt(effectifs_age_sexe, id_vars=['age'],
 nbr_population_totale = effectifs_age_sexe['effectif_ref'].sum()
 marges = get_proba(effectifs_age_sexe.set_index(['sexe', 'age']), 'effectif_ref')
 
-population = generate_population(marges, sample_size)
-
+population = generate_population(marges, sample_size_target)
+sample_size = len(population)
 #### test de la probabilité
 
 ## génère un dataframe avec les marges de la population générées
@@ -56,55 +52,30 @@ reference_activite = pd.melt(reference_activite, id_vars=['classe_age'],
                              value_name='effectif')
 
 reference_activite['effectif'] *= 1000
+
 nbr_population_active = sum(reference_activite['effectif'])
 ##### reference_activite : création colonne age_inf et age_sup
 
 # Note : classe-age est bien les classes d'ages utilisées dans la table activité
 #       -> pas nécessairement universel
 
-classe_ages = reference_activite['classe_age'].str.replace(' ans', '')
+classes_age = reference_activite['classe_age'].str.replace(' ans', '')
 max_age = effectifs_age_sexe['age'].max()
-classe_ages = classe_ages.str.replace(' ou plus', '-' + str(max_age))
-reference_activite['classe_age'] = classe_ages
-
-def get_classes_age(tab, age_col, classes):
-    ''' ajoute une colonne à tab contenant la classe d'age
-        faisant référence aux catégories de la serie classes
-    '''
-    assert isinstance(classe_ages, pd.Series)
-    assert classes.name not in tab.columns
-    age = tab[age_col]
-
-    tab[classes.name] = ''
-    for classe in classes.unique():
-        age_inf = int(classe.split('-')[0])
-        age_sup = int(classe.split('-')[1])
-        cond_classe = (age >= age_inf) & (age <= age_sup)
-        tab.loc[cond_classe, classes.name] = classe
-    return tab
+classes_age = classes_age.str.replace(' ou plus', '-' + str(max_age))
+reference_activite['classe_age'] = classes_age
 
 effectifs_age_sexe = get_classes_age(effectifs_age_sexe,
                                      'age',
-                                     classe_ages)
+                                     classes_age)
 
 ##### reference_activite : création de la colonne proba_activite
 
-def ajout_effectif_reference(tab_init, tab_ref, col_ref, groupby):
-    '''
-    Ajoute à la table d'intérêt l'effectif de référence
-    '''
-    assert all(tab_init.groupby(groupby).size() == 1)
-    reference = tab_ref.groupby(groupby)[col_ref].sum()
-    reference = reference.reset_index()
-    output = tab_init.merge(reference, on=groupby, how='left')
-    return output
 
 reference_activite = ajout_effectif_reference(reference_activite,
                                               effectifs_age_sexe,
                                               'effectif_ref',
                                               ['sexe', 'classe_age'])
 
-print(reference_activite)
 
 
 def effectif_to_ratio(tab_output, column_output, column_subject, column_ref):
@@ -114,25 +85,37 @@ def effectif_to_ratio(tab_output, column_output, column_subject, column_ref):
     tab_output[column_output] = tab_output[column_subject] / tab_output[column_ref]
 
 reference_activite['proba_activite'] = ''
+
 effectif_to_ratio(reference_activite, 'proba_activite', 'effectif', 'effectif_ref')
 
-population = get_classes_age(population, 'age', classe_ages)
-
-
+population = get_classes_age(population, 'age', classes_age)
 population_activite = population.copy()
 
 
-population_activite = population_activite.merge(reference_activite, how='left')
+population_activite = population_activite.merge(reference_activite, how='outer')
 
 population['activite'] = ''
 population['activite'] = np.random.binomial(1, population_activite['proba_activite'])
 
+# Ajout des effectifs des non actifs
+
+reference_inactivite = reference_activite[reference_activite['classe_age'] != '0-14']
+reference_inactivite['effectif'] = reference_inactivite['effectif_ref'] - reference_inactivite['effectif']
+reference_inactivite['proba_activite'] = 0
+reference_inactivite['effectif_ref'] = 0
+reference_activite = pd.concat([reference_activite, reference_inactivite])
+
+reference_activite['activite'] = 0
+reference_activite.loc[reference_activite['proba_activite'] != 0, 'activite'] = 1
+
 #### Vérifier que le tirage se rapproche de la réalité
-groupby = ['sexe', 'classe_age', 'activite']
-ratio_activite = check_tirage(population, reference_activite, groupby)
+#groupby = ['sexe', 'classe_age', 'activite']
+#ratio_activite = check_tirage(population, reference_activite, groupby)
+#
+#print(ratio_activite['ratio'].describe())
 
-print(ratio_activite['ratio'].describe())
-
+ratio = check_tirage(population[population['activite'] == 1], reference_activite, sample_size, ['sexe', 'classe_age', 'activite'])
+print(ratio['ratio'].describe())
 
 ### Salaire
 
