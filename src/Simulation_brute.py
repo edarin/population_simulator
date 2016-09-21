@@ -32,8 +32,10 @@ sample_size = len(population)
 
 # just a trick to use distance_to_reference
 effectifs_age_sexe['effectif'] = effectifs_age_sexe['effectif_ref']
-test_pop = distance_to_reference(population, effectifs_age_sexe, sample_size, ['age','sexe'])
-print(test_pop['ratio'].describe())
+test_age_sexe = distance_to_reference(population, effectifs_age_sexe, sample_size, ['age','sexe'])
+del effectifs_age_sexe['effectif']
+print ("Test effectifs simulés pour âge et sexe :")
+print(test_age_sexe['ratio'].describe())
 
 ######### Activité
 
@@ -73,16 +75,16 @@ population_activite = population_activite.merge(reference_activite, how='outer')
 population['activite'] = np.random.binomial(1, population_activite['proba_activite'])
 population['activite'] = population['activite'].astype(bool)
 # Ajout des effectifs des non actifs
+
 reference_activite = from_unique_value_reference_to_standard_reference(
     reference_activite,
     'activite')
 #### Vérifier que le tirage se rapproche de la réalité
-ratio = distance_to_reference(population[population['activite'] == 1], reference_activite, sample_size, ['sexe', 'classe_age', 'activite'])
-ratio = distance_to_reference(population, reference_activite, sample_size,
+test_activite = distance_to_reference(population, reference_activite, sample_size,
                      ['sexe', 'classe_age', 'activite'],
                      nb_modalite=2)
-
-print(ratio['ratio'].describe())
+print ("Test effectifs simulés pour activité :")
+print(test_activite['ratio'].describe())
 
 ### Salaire
 

@@ -81,11 +81,22 @@ def from_unique_value_reference_to_standard_reference(tab, col):
         format standard en ajoutant les effectifs complémentaire avec 
         la variable col qui est un booléen True pour l'effectif 
         d'orginie et False pour l'autre
+        
+        Input : 
+        "tab" (concerne la sous-pop)
+        colonnes :   variables d'identification (age,sexe) -> partagées avec la pop entière
+                    effectif (effectif de la variable d'intérêt)
+                    effectif_ref (effectif correspondant dans la population entière)
+                    proba (effectif/effectif_ref)
+        output
+        "tab" (concernant cette fois toute la population)
+        colonnes :  les mêmes
+                    + "col": booléenne
     '''
     tab_other_value = tab.copy()
     tab_other_value['effectif'] = tab_other_value['effectif_ref'] - tab_other_value['effectif']
-    tab_other_value['proba_activite'] = tab_other_value['effectif']/tab_other_value['effectif_ref']
-    tab['activite'] = True
-    tab_other_value['activite'] = False
+    tab_other_value['proba_{0}'.format(col)] = tab_other_value['effectif']/tab_other_value['effectif_ref']
+    tab[col] = True
+    tab_other_value[col] = False
     tab = pd.concat([tab, tab_other_value])
     return tab
