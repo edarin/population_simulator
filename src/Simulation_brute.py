@@ -86,221 +86,121 @@ print ("Test effectifs simulés pour activité :")
 print(test_activite['ratio'].describe())
 
 
-## Emploi
+## Emploi : hypothèse : tout le monde est à tp plein
 
 ###Lecture table
-reference_heure_travaillees = pd.read_csv("data/travail/nbr_heure_travaillees.csv")
-reference_heure_travaillees = pd.melt(reference_heure_travaillees, id_vars=['classe_age_salaire'],
+reference_emploi = pd.read_csv("data/travail/nbr_heure_travaillees.csv")
+reference_emploi = pd.melt(reference_emploi, id_vars=['classe_age_salaire'],
                              value_vars=['femme', 'homme'], var_name = 'sexe',
                              value_name='total_heures')
 
-classes_age_salaire = reference_heure_travaillees['classe_age_salaire'].str.replace('De | ans|', '', case=False)
+classes_age_salaire = reference_emploi['classe_age_salaire'].str.replace('De | ans|', '', case=False)
 classes_age_salaire = classes_age_salaire.str.replace(' à ', '-')
 classes_age_salaire = classes_age_salaire.str.replace('Moins ', '15-')
 classes_age_salaire = classes_age_salaire.str.replace('Plus 65', '65-' + str(max_age))
 classes_age_salaire.name = 'classe_age_salaire'
-reference_heure_travaillees['classe_age_salaire'] = classes_age_salaire
+reference_emploi['classe_age_salaire'] = classes_age_salaire
 
-reference_heure_travaillees['total_heures'] *= 1000
+reference_emploi['total_heures'] *= 1000
 
 ### Obtention du nbr d'individu en emploi
-reference_heure_travaillees['effectif'] = reference_heure_travaillees['total_heures'] / 1820
-reference_heure_travaillees['emploi_tp_ech'] = round(reference_heure_travaillees['effectif'] * (sample_size / nbr_population_totale)).astype(int)
-nbr_pop_emploi = reference_heure_travaillees['effectif'].sum()
+duree_travail_legal_an = 1607 # référence légale du nbr d'heures par an pour un tps plein
+reference_emploi['effectif'] = reference_emploi['total_heures'] / duree_travail_legal_an
+reference_emploi['emploi_ech'] = reference_emploi['effectif'] * (sample_size / nbr_population_totale)
+nbr_pop_emploi = reference_emploi['effectif'].sum()
 
 
 ### Récupération du nbr d'actif dans les classes d'âge de l'emploi
 population = get_classes_age(population,
                                      'age',
                                      classes_age_salaire)
-                                     
+
 
 population['pop_active'] = population['activite']
-reference_heure_travaillees = ajout_effectif_reference(reference_heure_travaillees, 
-                                                       population[population['activite'] ==  True], 
-                                                       'pop_active', 
+reference_emploi = ajout_effectif_reference(reference_emploi,
+                                                       population[population['activite'] ==  True],
+                                                       'pop_active',
                                                        ['sexe', 'classe_age_salaire'])
 del population['pop_active']
 
-### Calcul de la proba conditionnelle d'être en emploi quand en activité
-reference_heure_travaillees['proba_emploi_cond_activite'] = reference_heure_travaillees['emploi_tp_ech'] / reference_heure_travaillees['pop_active']
-reference_heure_travaillees['activite'] = np.bool(True)
+### Calcul de la proba conditionnelle d'être en emploi quand en activité (!)
+reference_emploi['proba_emploi_cond_activite'] = reference_emploi['emploi_ech'] / reference_emploi['pop_active']
+reference_emploi['activite'] = np.bool(True)
 
 ### Création de la variable indicatrice d'être en emploi
 population_emploi = population.copy()
-population_emploi = population_emploi.merge(reference_heure_travaillees, how='left')
+population_emploi = population_emploi.merge(reference_emploi, how='left')
 population_emploi.fillna(0, inplace=True)
 population['emploi'] = np.random.binomial(1, population_emploi['proba_emploi_cond_activite'])
 population['emploi'] = population['emploi'].astype(bool)
 
 assert population.loc[population.activite == False, 'emploi'].unique() == False, "Il existe des non-actifs en emploi"
+
 #Vérification
-#### Vérifier que le tirage se rapproche de la réalité
+
+#### Construcion de la table standard
 effectifs_age_sexe = get_classes_age(effectifs_age_sexe,
                                      'age',
                                      classes_age_salaire)
-reference_heure_travaillees = ajout_effectif_reference(reference_heure_travaillees,
+reference_emploi = ajout_effectif_reference(reference_emploi,
                                               effectifs_age_sexe,
                                               'effectif_ref',
                                               ['sexe', 'classe_age_salaire'])
-reference_heure_travaillees = from_unique_value_reference_to_standard_reference(
-    reference_heure_travaillees,
-    'emploi')                                              
-xx            
-test_emploi = distance_to_reference(population, reference_heure_travaillees, sample_size,
+reference_emploi = from_unique_value_reference_to_standard_reference(
+    reference_emploi,
+    'emploi')
+
+test_emploi = distance_to_reference(population, reference_emploi, sample_size,
                      ['sexe', 'classe_age_salaire', 'emploi'],
                      nb_modalite=2)
-print ("Test effectifs simulés pour activité :")
-print(test_activite['ratio'].describe())
+print ("Test effectifs simulés pour emploi :")
+print(test_emploi['ratio'].describe())
 
-
-xx
 
 ### Salaire
 
 reference_salaire = pd.read_csv("data/travail/salaire_brut_horaire.csv")
-reference_salaire = pd.melt(reference_salaire, id_vars=['classe_age'],
+reference_salaire = pd.melt(reference_salaire, id_vars=['classe_age_salaire'],
                              value_vars=['femme', 'homme'], var_name = 'sexe',
-                             value_name='effectif')
-reference_salaire['classe_age'] = classes_age_salaire
+                             value_name='salaire')
+reference_salaire['classe_age_salaire'] = classes_age_salaire
 
-#revenus = [21820704, 503723963299] # (nbr de déclarant en case 1aj, montant total de cette case) -> 2014
-#revenus_moy = revenus[1] / float(revenus[0])
-#pourcent= REVENUS[0] / float(nbr_foyer)
-#
-#
-## In[ ]:
-#
-#def generate_random_cerfa():
-#    cerfa = {}
-#
-#    if random.random() < PERCENT_REVENUS_NOT_0 * 1.3:
-#        cerfa['1AJ'] = max(random.gauss(14000, 23500), 0)
-#    else:
-#        cerfa['1AJ'] = 0
-#    return cerfa
-#
-#def gradiant(a, b):
-#    if a > b:
-#        return min((a / b - 1) * random.random(), 0.5)
-#    else:
-#        return min((b / a - 1) * random.random(), 0.5)
-#
-#
-#def find_gaussian_parameters(number_not_0, total_value, distribution_percentage_null=5):
-#    def simulate_population(th, mu, sigma, percentage_repr):
-#        total_result = 0
-#        number_not_null = 0
-#        for i in range(0, int(TOTAL_DECLARATIONS * percentage_repr)):
-#            result = simulate_one_gaussian(th, mu, sigma)
-#            total_result += result
-#            if result > 0:
-#                number_not_null += 1
-#        return number_not_null / percentage_repr, total_result / percentage_repr
-#
-#    def simulate_one_gaussian(th, mu, sigma):
-#        if random.random() < th:
-#            return max(random.gauss(mu, sigma), 0)
-#        return 0
-#
-#    # Between 0 and 1
-#    number_not_0 = float(number_not_0)
-#    total_value = float(total_value)
-#
-#    percentage_repr = 0.001
-#    mu = total_value / number_not_0
-#    sigma = mu / 2
-#    mu_step = mu / 2
-#    sigma_step = sigma / 2
-#    th = (1 + distribution_percentage_null / 100.0) * number_not_0 / TOTAL_DECLARATIONS
-#    print(repr(th))
-#    max_number_of_simulations = 100
-#    for i in range(0, max_number_of_simulations):
-#        sim_not_0, sim_tot_value = simulate_population(th, mu, sigma, percentage_repr)
-#        if sim_not_0 > number_not_0:
-#            mu -= mu_step * gradiant(number_not_0, sim_not_0)
-#            # sigma -= sigma_step * gradiant(number_not_0, sim_not_0)
-#        else:
-#            mu += mu_step * gradiant(sim_not_0, number_not_0)
-#            # sigma += sigma_step * gradiant(sim_not_0, number_not_0)
-#
-#        if sim_tot_value > total_value:
-#            # mu -= mu_step * gradiant(total_value, sim_tot_value)
-#            sigma -= sigma_step * gradiant(total_value, sim_tot_value)
-#        else:
-#            # mu += mu_step * gradiant(sim_tot_value, total_value )
-#            sigma += sigma_step * gradiant(sim_tot_value, total_value)
-#        print('Total target ' + str(sim_tot_value/total_value) + ' not 0 target: ' + str(sim_not_0/number_not_0) + ' mu=' +  repr(mu) + ' sigma=' + repr(sigma) + ' th=' + str(th))
-#        mu_step = mu_step * 0.995
-#        sigma_step = sigma_step * 0.995
-#        percentage_repr = percentage_repr * 1.01
-#
-#
-#find_gaussian_parameters(21820704, 503723963299, distribution_percentage_null=5)
-#
-#
-## ### Gestion des situations familiales
-## Idée : obtenir le nombre moyen d'enfant = 1.7
-#
-## In[ ]:
-#
-## Statistiques by familly, approximated to match the declaration d'impots
-## Voir la distribution réelle mais bloquer par nbenf > 4 répartition en 3 plus calage car moyenne au-dessus de la réalité
-#CHILDREN_PER_FAMILY = [(1, 46), (2, 38.5), (3, 12.5), (4, 2), (5, 1)]
-#TOTAL_CHILDREN = float(sum(w*c for c, w in CHILDREN_PER_FAMILY))
-#print('TOTAL_CHILDREN = ', float(sum(w*c for c, w in CHILDREN_PER_FAMILY)))
-## Familles avec enfants a charge de moins de 18 ans
-#FAMILLES = 9321480
-#
-#
-## In[ ]:
-#
-#def weighted_choice(choices):
-#   total = sum(w for c, w in choices)
-#   r = random.uniform(0, total)
-#   upto = 0
-#   for c, w in choices:
-#      if upto + w >= r:
-#         return c
-#      upto += w
-#   assert False, "Shouldn't get here"
-#
-#
-#    # Age is random between 18 and 88
-#   cerfa['0DA'] = int(random.random() * 70 + 18)
-#
-#    # Drawing the situation
-#    # situation = weighted_choice(POSSIBLE_SITUATIONS)
-#    # cerfa[situation] = 1
-#
-#    ## We only give children to married or pacces. This is an approximation
-#    # enfants = 0
-#    # if situation == 'M' or situation == 'O':
-#    #     if random.random() < (FAMILLES / float(POSSIBLE_SITUATIONS[0][1] + POSSIBLE_SITUATIONS[2][1])):
-#    #         enfants = weighted_choice(CHILDREN_PER_FAMILY)
-#    #
-#    # if enfants > 0:
-#    #     cerfa['F'] = enfants
-#
-#    # Distribution that has a cool shape and required properties 5500, 26500
-#
-#
-## In[ ]:
-#
-#situations = [['M', 12002841], ['D', 5510809], ['O', 983754], ['C', 14934477], ['V', 3997578]]
-#nbr_foyer = int(sum(w for c, w in situations))
-#print("Nombre de déclarations :",nbr_foyer)
-#
-##to do : pour l'instant références implémentées en dur
-#
-#pourcent_situations = situations # connaitre la proportion pour distribuer
-#for x in pourcent_situations :
-#    x[1] = float(x[1])/nbr_foyer
-#pourcent_situations
-#
-#openfisca_entry_variables = ['1AJ', '1AS', '1AP', '1AO'] # à compléter au fur et à mesure
-#index = np.arange(nbr_foyer/1000)
-#population = pd.DataFrame(columns=openfisca_entry_variables, index = index)
-#len(population)
-#population.head()
+duree_travail_legal_mois = int(round(duree_travail_legal_an/12))
+
+reference_salaire['salaire'] *= duree_travail_legal_mois
+reference_salaire['emploi'] = np.bool(True)
+
+population = population.merge(reference_salaire, how='left')
+population['emploi'].fillna(0, inplace=True)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
