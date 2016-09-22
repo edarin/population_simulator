@@ -171,7 +171,7 @@ reference_salaire['salaire'] *= duree_travail_legal_mois
 reference_salaire['emploi'] = np.bool(True)
 
 population = population.merge(reference_salaire, how='left')
-population['emploi'].fillna(0, inplace=True)
+population['salaire'].fillna(0, inplace=True)
 
 
 
