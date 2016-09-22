@@ -75,7 +75,6 @@ population_activite = population_activite.merge(reference_activite, how='outer')
 population['activite'] = np.random.binomial(1, population_activite['proba_activite'])
 population['activite'] = population['activite'].astype(bool)
 # Ajout des effectifs des non actifs
-
 reference_activite = from_unique_value_reference_to_standard_reference(
     reference_activite,
     'activite')
@@ -90,40 +89,38 @@ print(test_activite['ratio'].describe())
 ## Emploi
 
 ###Lecture table
-reference_salaire = pd.read_csv("data/travail/salaire_brut_horaire.csv")
-reference_salaire = pd.melt(reference_salaire, id_vars=['classe_age_salaire'],
-                             value_vars=['femme', 'homme'], var_name = 'sexe',
-                             value_name='effectif')
 reference_heure_travaillees = pd.read_csv("data/travail/nbr_heure_travaillees.csv")
 reference_heure_travaillees = pd.melt(reference_heure_travaillees, id_vars=['classe_age_salaire'],
                              value_vars=['femme', 'homme'], var_name = 'sexe',
-                             value_name='effectif')
+                             value_name='total_heures')
 
 classes_age_salaire = reference_heure_travaillees['classe_age_salaire'].str.replace('De | ans|', '', case=False)
 classes_age_salaire = classes_age_salaire.str.replace(' à ', '-')
-
 classes_age_salaire = classes_age_salaire.str.replace('Moins ', '15-')
 classes_age_salaire = classes_age_salaire.str.replace('Plus 65', '65-' + str(max_age))
 classes_age_salaire.name = 'classe_age_salaire'
 reference_heure_travaillees['classe_age_salaire'] = classes_age_salaire
 
-reference_heure_travaillees['effectif'] *= 1000
+reference_heure_travaillees['total_heures'] *= 1000
 
 ### Obtention du nbr d'individu en emploi
-reference_heure_travaillees['nbr_emploi_tp'] = reference_heure_travaillees['effectif'] / 1820
-reference_heure_travaillees['emploi_tp_ech'] = round(reference_heure_travaillees['nbr_emploi_tp'] * (sample_size / nbr_population_totale)).astype(int)
+reference_heure_travaillees['effectif'] = reference_heure_travaillees['total_heures'] / 1820
+reference_heure_travaillees['emploi_tp_ech'] = round(reference_heure_travaillees['effectif'] * (sample_size / nbr_population_totale)).astype(int)
+nbr_pop_emploi = reference_heure_travaillees['effectif'].sum()
 
-nbr_pop_emploi = reference_heure_travaillees['nbr_emploi_tp'].sum()
 
 ### Récupération du nbr d'actif dans les classes d'âge de l'emploi
 population = get_classes_age(population,
                                      'age',
                                      classes_age_salaire)
-pop_active = pd.DataFrame(population[population['activite'] ==  True].groupby(['sexe', 'classe_age_salaire']).size())
-pop_active = pop_active.reset_index()
-pop_active.rename(columns={0: 'pop_active'}, inplace=True)
+                                     
 
-reference_heure_travaillees = reference_heure_travaillees.merge(pop_active, on= ['classe_age_salaire','sexe'], how='outer')
+population['pop_active'] = population['activite']
+reference_heure_travaillees = ajout_effectif_reference(reference_heure_travaillees, 
+                                                       population[population['activite'] ==  True], 
+                                                       'pop_active', 
+                                                       ['sexe', 'classe_age_salaire'])
+del population['pop_active']
 
 ### Calcul de la proba conditionnelle d'être en emploi quand en activité
 reference_heure_travaillees['proba_emploi_cond_activite'] = reference_heure_travaillees['emploi_tp_ech'] / reference_heure_travaillees['pop_active']
@@ -138,11 +135,29 @@ population['emploi'] = population['emploi'].astype(bool)
 
 assert population.loc[population.activite == False, 'emploi'].unique() == False, "Il existe des non-actifs en emploi"
 #Vérification
-reference_heure_travaillees['emploi_tp_ech'].sum()/reference_heure_travaillees['pop_active'].sum()
-nbr_pop_emploi / nbr_population_active
+#### Vérifier que le tirage se rapproche de la réalité
+effectifs_age_sexe = get_classes_age(effectifs_age_sexe,
+                                     'age',
+                                     classes_age_salaire)
+reference_heure_travaillees = ajout_effectif_reference(reference_heure_travaillees,
+                                              effectifs_age_sexe,
+                                              'effectif_ref',
+                                              ['sexe', 'classe_age_salaire'])
+reference_heure_travaillees = from_unique_value_reference_to_standard_reference(
+    reference_heure_travaillees,
+    'emploi')                                              
+xx            
+test_emploi = distance_to_reference(population, reference_heure_travaillees, sample_size,
+                     ['sexe', 'classe_age_salaire', 'emploi'],
+                     nb_modalite=2)
+print ("Test effectifs simulés pour activité :")
+print(test_activite['ratio'].describe())
+
+
 xx
 
 ### Salaire
+
 reference_salaire = pd.read_csv("data/travail/salaire_brut_horaire.csv")
 reference_salaire = pd.melt(reference_salaire, id_vars=['classe_age'],
                              value_vars=['femme', 'homme'], var_name = 'sexe',
