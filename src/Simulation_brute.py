@@ -46,7 +46,7 @@ reference_activite = pd.melt(reference_activite, id_vars=['classe_age'],
                              value_name='effectif')
 
 reference_activite['effectif'] *= 1000
-
+nbr_population_active = reference_activite['effectif'].sum()
 
 # Note : classe-age est bien les classes d'ages utilisées dans la table activité
 #       -> pas nécessairement universel
@@ -86,7 +86,68 @@ test_activite = distance_to_reference(population, reference_activite, sample_siz
 print ("Test effectifs simulés pour activité :")
 print(test_activite['ratio'].describe())
 
+
+## Emploi
+
+###Lecture table
+reference_salaire = pd.read_csv("data/travail/salaire_brut_horaire.csv")
+reference_salaire = pd.melt(reference_salaire, id_vars=['classe_age_salaire'],
+                             value_vars=['femme', 'homme'], var_name = 'sexe',
+                             value_name='effectif')
+reference_heure_travaillees = pd.read_csv("data/travail/nbr_heure_travaillees.csv")
+reference_heure_travaillees = pd.melt(reference_heure_travaillees, id_vars=['classe_age_salaire'],
+                             value_vars=['femme', 'homme'], var_name = 'sexe',
+                             value_name='effectif')
+
+classes_age_salaire = reference_heure_travaillees['classe_age_salaire'].str.replace('De | ans|', '', case=False)
+classes_age_salaire = classes_age_salaire.str.replace(' à ', '-')
+
+classes_age_salaire = classes_age_salaire.str.replace('Moins ', '15-')
+classes_age_salaire = classes_age_salaire.str.replace('Plus 65', '65-' + str(max_age))
+classes_age_salaire.name = 'classe_age_salaire'
+reference_heure_travaillees['classe_age_salaire'] = classes_age_salaire
+
+reference_heure_travaillees['effectif'] *= 1000
+
+### Obtention du nbr d'individu en emploi
+reference_heure_travaillees['nbr_emploi_tp'] = reference_heure_travaillees['effectif'] / 1820
+reference_heure_travaillees['emploi_tp_ech'] = round(reference_heure_travaillees['nbr_emploi_tp'] * (sample_size / nbr_population_totale)).astype(int)
+
+nbr_pop_emploi = reference_heure_travaillees['nbr_emploi_tp'].sum()
+
+### Récupération du nbr d'actif dans les classes d'âge de l'emploi
+population = get_classes_age(population,
+                                     'age',
+                                     classes_age_salaire)
+pop_active = pd.DataFrame(population[population['activite'] ==  True].groupby(['sexe', 'classe_age_salaire']).size())
+pop_active = pop_active.reset_index()
+pop_active.rename(columns={0: 'pop_active'}, inplace=True)
+
+reference_heure_travaillees = reference_heure_travaillees.merge(pop_active, on= ['classe_age_salaire','sexe'], how='outer')
+
+### Calcul de la proba conditionnelle d'être en emploi quand en activité
+reference_heure_travaillees['proba_emploi_cond_activite'] = reference_heure_travaillees['emploi_tp_ech'] / reference_heure_travaillees['pop_active']
+reference_heure_travaillees['activite'] = np.bool(True)
+
+### Création de la variable indicatrice d'être en emploi
+population_emploi = population.copy()
+population_emploi = population_emploi.merge(reference_heure_travaillees, how='left')
+population_emploi.fillna(0, inplace=True)
+population['emploi'] = np.random.binomial(1, population_emploi['proba_emploi_cond_activite'])
+population['emploi'] = population['emploi'].astype(bool)
+
+assert population.loc[population.activite == False, 'emploi'].unique() == False, "Il existe des non-actifs en emploi"
+#Vérification
+reference_heure_travaillees['emploi_tp_ech'].sum()/reference_heure_travaillees['pop_active'].sum()
+nbr_pop_emploi / nbr_population_active
+xx
+
 ### Salaire
+reference_salaire = pd.read_csv("data/travail/salaire_brut_horaire.csv")
+reference_salaire = pd.melt(reference_salaire, id_vars=['classe_age'],
+                             value_vars=['femme', 'homme'], var_name = 'sexe',
+                             value_name='effectif')
+reference_salaire['classe_age'] = classes_age_salaire
 
 #revenus = [21820704, 503723963299] # (nbr de déclarant en case 1aj, montant total de cette case) -> 2014
 #revenus_moy = revenus[1] / float(revenus[0])
