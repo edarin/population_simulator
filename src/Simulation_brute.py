@@ -86,101 +86,128 @@ print ("Test effectifs simulés pour activité :")
 print(test_activite['ratio'].describe())
 
 
-## Emploi : hypothèse : tout le monde est à tp plein
+## Emploi : à partir du taux de chomaĝe
+
+# INSEE 2016(T2)
 
 ###Lecture table
-reference_emploi = pd.read_csv("data/travail/nbr_heure_travaillees.csv")
-reference_emploi = pd.melt(reference_emploi, id_vars=['classe_age_salaire'],
+reference_emploi = pd.read_csv("data/travail/chomage.csv")
+reference_emploi = pd.melt(reference_emploi, id_vars=['classe_age_chomage'],
                              value_vars=['femme', 'homme'], var_name = 'sexe',
-                             value_name='total_heures')
+                             value_name='taux_chomage')
+reference_emploi['taux_chomage'] /=100
 
-classes_age_salaire = reference_emploi['classe_age_salaire'].str.replace('De | ans|', '', case=False)
-classes_age_salaire = classes_age_salaire.str.replace(' à ', '-')
-classes_age_salaire = classes_age_salaire.str.replace('Moins ', '15-')
-classes_age_salaire = classes_age_salaire.str.replace('Plus 65', '65-' + str(max_age))
-classes_age_salaire.name = 'classe_age_salaire'
-reference_emploi['classe_age_salaire'] = classes_age_salaire
-
-reference_emploi['total_heures'] *= 1000
-
-### Obtention du nbr d'individu en emploi
-duree_travail_legal_an = 1607 # référence légale du nbr d'heures par an pour un tps plein
-reference_emploi['effectif'] = reference_emploi['total_heures'] / duree_travail_legal_an
-reference_emploi['emploi_ech'] = reference_emploi['effectif'] * (sample_size / nbr_population_totale)
-nbr_pop_emploi = reference_emploi['effectif'].sum()
-
+classes_age_chomage = reference_emploi['classe_age_chomage'].str.replace('>49', '50-' + str(max_age))
+reference_emploi['classe_age_chomage'] = classes_age_chomage
+reference_emploi['activite'] = np.bool(True)
+reference_emploi['proba_emploi'] = 1 - reference_emploi['taux_chomage']
 
 ### Récupération du nbr d'actif dans les classes d'âge de l'emploi
 population = get_classes_age(population,
                                      'age',
-                                     classes_age_salaire)
-
-
-population['pop_active'] = population['activite']
-reference_emploi = ajout_effectif_reference(reference_emploi,
-                                                       population[population['activite'] ==  True],
-                                                       'pop_active',
-                                                       ['sexe', 'classe_age_salaire'])
-del population['pop_active']
-
-### Calcul de la proba conditionnelle d'être en emploi quand en activité (!)
-reference_emploi['proba_emploi_cond_activite'] = reference_emploi['emploi_ech'] / reference_emploi['pop_active']
-reference_emploi['activite'] = np.bool(True)
-
+                                     classes_age_chomage)
+                                     
 ### Création de la variable indicatrice d'être en emploi
 population_emploi = population.copy()
 population_emploi = population_emploi.merge(reference_emploi, how='left')
 population_emploi.fillna(0, inplace=True)
-population['emploi'] = np.random.binomial(1, population_emploi['proba_emploi_cond_activite'])
+population['emploi'] = np.random.binomial(1, population_emploi['proba_emploi'])
 population['emploi'] = population['emploi'].astype(bool)
 
 assert population.loc[population.activite == False, 'emploi'].unique() == False, "Il existe des non-actifs en emploi"
 
 #Vérification
+nbr_population_active_ech = population.loc[ population['activite'] == True, 'activite'].sum()
 
-#### Construcion de la table standard
-effectifs_age_sexe = get_classes_age(effectifs_age_sexe,
-                                     'age',
-                                     classes_age_salaire)
-reference_emploi = ajout_effectif_reference(reference_emploi,
-                                              effectifs_age_sexe,
-                                              'effectif_ref',
-                                              ['sexe', 'classe_age_salaire'])
-reference_emploi = from_unique_value_reference_to_standard_reference(
-    reference_emploi,
-    'emploi')
+test_emploi = pd.DataFrame(population[population['activite'] == True].groupby(['classe_age_chomage', 'sexe']).size()).reset_index()
+test_emploi.rename(columns={0: 'effectif_genere'}, inplace=True)
+test_emploi['proba_generee'] = 1 - (test_emploi['effectif_genere'] / nbr_population_active_ech)
 
-test_emploi = distance_to_reference(population, reference_emploi, sample_size,
-                     ['sexe', 'classe_age_salaire', 'emploi'],
-                     nb_modalite=2)
+test_emploi = test_emploi.merge(reference_emploi, on=['sexe', 'classe_age_chomage'])
+test_emploi['ratio'] = test_emploi['proba_generee'] / test_emploi['proba_emploi']
+
 print ("Test effectifs simulés pour emploi :")
 print(test_emploi['ratio'].describe())
 
+# Taux de chômage population généré
+population_chomage = population[(population['activite'] == True) & (population['emploi'] == False)]
+nbr_population_active_ech = population.loc[ population['activite'] == True, 'activite'].sum()
+taux_chomage_genere = len(population_chomage.index) / nbr_population_active_ech
+print ("taux de chomage genéré : ", taux_chomage_genere*100)
+
+
 
 ### Salaire
+# INSEE 2012
 
 reference_salaire = pd.read_csv("data/travail/salaire_brut_horaire.csv")
 reference_salaire = pd.melt(reference_salaire, id_vars=['classe_age_salaire'],
                              value_vars=['femme', 'homme'], var_name = 'sexe',
                              value_name='salaire')
+
+classes_age_salaire = reference_salaire['classe_age_salaire'].str.replace('De | ans|', '', case=False)
+classes_age_salaire = classes_age_salaire.str.replace(' à ', '-')
+classes_age_salaire = classes_age_salaire.str.replace('Moins ', '15-')
+classes_age_salaire = classes_age_salaire.str.replace('Plus 65', '65-' + str(max_age))
 reference_salaire['classe_age_salaire'] = classes_age_salaire
 
+duree_travail_legal_an = 1607 # référence légale du nbr d'heures par an pour un tps plein
 duree_travail_legal_mois = int(round(duree_travail_legal_an/12))
 
 reference_salaire['salaire'] *= duree_travail_legal_mois
 reference_salaire['emploi'] = np.bool(True)
 
-population = population.merge(reference_salaire, how='left')
+population = get_classes_age(population,
+                                     'age',
+                                     classes_age_salaire)
+                                     
+
+population = population.merge(reference_salaire, how='left', on=['sexe', 'classe_age_salaire', 'emploi'])
 population['salaire'].fillna(0, inplace=True)
 
 
 
-
-
-
-
-
-
+####Heures travaillées
+#reference_heures_travaillees = pd.read_csv("data/travail/nbr_heure_travaillees.csv")
+#reference_heures_travaillees = pd.melt(reference_emploi, id_vars=['classe_age_salaire'],
+#                             value_vars=['femme', 'homme'], var_name = 'sexe',
+#                             value_name='total_heures')
+#
+#
+#
+#### Obtention du nbr d'individu en emploi
+#duree_travail_legal_an = 1607 # référence légale du nbr d'heures par an pour un tps plein
+#reference_heures_travaillees['effectif'] = reference_heures_travaillees['total_heures'] / duree_travail_legal_an
+#reference_heures_travaillees['emploi_ech'] = reference_heures_travaillees['effectif'] * (sample_size / nbr_population_totale)
+#
+#population['pop_active'] = population['activite']
+#reference_emploi = ajout_effectif_reference(reference_emploi,
+#                                                       population[population['activite'] ==  True],
+#                                                       'pop_active',
+#                                                       ['sexe', 'classe_age_salaire'])
+#del population['pop_active']
+#
+#### Calcul de la proba conditionnelle d'être en emploi quand en activité (!)
+#reference_emploi['proba_emploi_cond_activite'] = reference_emploi['emploi_ech'] / reference_emploi['pop_active']
+#reference_emploi['activite'] = np.bool(True)
+#
+##### Construcion de la table standard
+#effectifs_age_sexe = get_classes_age(effectifs_age_sexe,
+#                                     'age',
+#                                     classes_age_salaire)
+#reference_heures_travaillees = ajout_effectif_reference(reference_emploi,
+#                                              effectifs_age_sexe,
+#                                              'effectif_ref',
+#                                              ['sexe', 'classe_age_salaire'])
+#reference_heures_travaillees = from_unique_value_reference_to_standard_reference(
+#    reference_heures_travaillees,
+#    'emploi')
+#
+#test_heures_travaillees = distance_to_reference(population, reference_heures-travaillees, sample_size,
+#                     ['sexe', 'classe_age_salaire', 'emploi'],
+#                     nb_modalite=2)
+#print ("Test effectifs simulés pour heures :")
+#print(test_heures_travaillees['ratio'].describe())
 
 
 
