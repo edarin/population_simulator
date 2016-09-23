@@ -38,9 +38,11 @@ print ("Test effectifs simulés pour âge et sexe :")
 print(test_age_sexe['ratio'].describe())
 
 ######### Activité
+# Indicatrice : 1 si actif
+# INSEE 2015
 
 ### reference_activite: lecture de la table de référence
-reference_activite = pd.read_csv("data/demographie/activite.csv")
+reference_activite = pd.read_csv("data/demographie/activite_2015.csv")
 reference_activite = pd.melt(reference_activite, id_vars=['classe_age'],
                              value_vars=['femme', 'homme'], var_name = 'sexe',
                              value_name='effectif')
@@ -87,6 +89,7 @@ print(test_activite['ratio'].describe())
 
 
 ## Emploi : à partir du taux de chomaĝe
+# Indicatrice : 1 si emploi
 
 # INSEE 2016(T2)
 
@@ -106,7 +109,7 @@ reference_emploi['proba_emploi'] = 1 - reference_emploi['taux_chomage']
 population = get_classes_age(population,
                                      'age',
                                      classes_age_chomage)
-                                     
+
 ### Création de la variable indicatrice d'être en emploi
 population_emploi = population.copy()
 population_emploi = population_emploi.merge(reference_emploi, how='left')
@@ -129,7 +132,7 @@ test_emploi['ratio'] = test_emploi['proba_generee'] / test_emploi['proba_emploi'
 print ("Test effectifs simulés pour emploi :")
 print(test_emploi['ratio'].describe())
 
-# Taux de chômage population généré
+# Taux de chômage population générée
 population_chomage = population[(population['activite'] == True) & (population['emploi'] == False)]
 nbr_population_active_ech = population.loc[ population['activite'] == True, 'activite'].sum()
 taux_chomage_genere = len(population_chomage.index) / nbr_population_active_ech
@@ -160,13 +163,39 @@ reference_salaire['emploi'] = np.bool(True)
 population = get_classes_age(population,
                                      'age',
                                      classes_age_salaire)
-                                     
+
 
 population = population.merge(reference_salaire, how='left', on=['sexe', 'classe_age_salaire', 'emploi'])
 population['salaire'].fillna(0, inplace=True)
 
+### Retraite
 
+## INSEE 2012
+# Montant moyen mensuel de la retraite globale
+# Champ : retraités de droit direct, âgés de 65 ans ou plus, 
+#       nés en France ou à l'étranger, résidents en France ou à l'étranger. 
+#       Les retraités ne percevant qu'une pension de réversion sont exclus.
 
+reference_retraite = pd.read_csv("data/travail/retraite_2012.csv")
+reference_retraite = pd.melt(reference_retraite, id_vars=['classe_age_retraite'],
+                             value_vars=['femme', 'homme'], var_name = 'sexe',
+                             value_name='retraite')
+                             
+classes_age_retraite = reference_retraite['classe_age_retraite'].str.replace(' ans|', '')                            
+classes_age_retraite = classes_age_retraite.str.replace(' à ', '-')
+classes_age_retraite = classes_age_retraite.str.replace(' et plus', '-' + str(max_age))
+reference_retraite['classe_age_retraite'] = classes_age_retraite
+
+reference_retraite['activite'] = np.bool(False)
+
+population = get_classes_age(population,
+                                     'age',
+                                     classes_age_retraite)
+                                     
+population = population.merge(reference_retraite, how='left', on=['sexe', 'classe_age_retraite', 'activite'])
+population['retraite'].fillna(0, inplace=True)
+
+xx
 ####Heures travaillées
 #reference_heures_travaillees = pd.read_csv("data/travail/nbr_heure_travaillees.csv")
 #reference_heures_travaillees = pd.melt(reference_emploi, id_vars=['classe_age_salaire'],
