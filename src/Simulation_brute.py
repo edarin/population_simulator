@@ -7,11 +7,13 @@ from tools import (distance_to_reference, get_proba, get_classes_age,
     ajout_effectif_reference,
     from_unique_value_reference_to_standard_reference)
 
-sample_size_target = 10000
+sample_size_target = 100000
 
 
 ##### Sexe et Age
 # Issu de données INSEE 2016
+# Champ : France y compris Mayotte.
+# Source : Insee, estimations de population (résultats provisoires arrêtés à fin 2015).
 # À noter : âge = 100 correspond à 100 et plus
 
 effectifs_age_sexe = pd.read_csv("data/demographie/pop_age_sexe_2016.csv")
@@ -39,7 +41,10 @@ print(test_age_sexe['ratio'].describe())
 
 ######### Activité
 # Indicatrice : 1 si actif
-# INSEE 2015
+# Population active
+# Champ : France métropolitaine, population des ménages, actifs de 15 ans ou plus. 
+# Source : Insee, enquête Emploi. 
+# 2015
 
 ### reference_activite: lecture de la table de référence
 reference_activite = pd.read_csv("data/demographie/activite_2015.csv")
@@ -90,8 +95,11 @@ print(test_activite['ratio'].describe())
 
 ## Emploi : à partir du taux de chomaĝe
 # Indicatrice : 1 si emploi
-
-# INSEE 2016(T2)
+#
+# Taux de chômage trimestriel au sens du BIT en France (hors Mayotte)
+# Données CVS en moyenne trimestrielle, en %
+# Champ : France (hors Mayotte), population des ménages, personnes de 15 ans ou plus
+# Source : Insee, enquête Emploi, 2012(T2)
 
 ###Lecture table
 reference_emploi = pd.read_csv("data/travail/chomage.csv")
@@ -136,12 +144,18 @@ print(test_emploi['ratio'].describe())
 population_chomage = population[(population['activite'] == True) & (population['emploi'] == False)]
 nbr_population_active_ech = population.loc[ population['activite'] == True, 'activite'].sum()
 taux_chomage_genere = len(population_chomage.index) / nbr_population_active_ech
-print ("taux de chomage genéré : ", taux_chomage_genere*100)
+print ("Taux de chômage généré : ", taux_chomage_genere*100)
 
 
 
 ### Salaire
-# INSEE 2012
+# Salaire brut horaire moyen (€)
+# Champ : 
+#   - salariés du secteur privé ou d'une entreprise publique, hors agriculture, y compris bénéficiaires de contrats aidés et chefs d'entreprises salariés ;
+#   - sont exclus, les apprentis, les stagiaires, les salariés agricoles et les salariés des particuliers employeurs.
+#   - France entière y compris DOM.
+#Source : Insee, DADS 2012. 
+
 
 reference_salaire = pd.read_csv("data/travail/salaire_brut_horaire.csv")
 reference_salaire = pd.melt(reference_salaire, id_vars=['classe_age_salaire'],
@@ -175,6 +189,7 @@ population['salaire'].fillna(0, inplace=True)
 # Champ : retraités de droit direct, âgés de 65 ans ou plus, 
 #       nés en France ou à l'étranger, résidents en France ou à l'étranger. 
 #       Les retraités ne percevant qu'une pension de réversion sont exclus.
+# Source : Drees, échantillon interrégimes de retraités 2012.
 
 reference_retraite = pd.read_csv("data/travail/retraite_2012.csv")
 reference_retraite = pd.melt(reference_retraite, id_vars=['classe_age_retraite'],
@@ -195,7 +210,8 @@ population = get_classes_age(population,
 population = population.merge(reference_retraite, how='left', on=['sexe', 'classe_age_retraite', 'activite'])
 population['retraite'].fillna(0, inplace=True)
 
-xx
+assert population.loc[population['retraite'] != 0, 'age'].min() == 65, "On ne peut toucher de retraite avant 65 ans"
+
 ####Heures travaillées
 #reference_heures_travaillees = pd.read_csv("data/travail/nbr_heure_travaillees.csv")
 #reference_heures_travaillees = pd.melt(reference_emploi, id_vars=['classe_age_salaire'],
