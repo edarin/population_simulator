@@ -7,7 +7,7 @@ from tools import (distance_to_reference, get_proba, get_classes_age,
     ajout_effectif_reference,
     from_unique_value_reference_to_standard_reference)
 
-sample_size_target = 100000
+sample_size_target = 10000
 
 
 ##### Sexe et Age
@@ -42,8 +42,8 @@ print(test_age_sexe['ratio'].describe())
 ######### Activité
 # Indicatrice : 1 si actif
 # Population active
-# Champ : France métropolitaine, population des ménages, actifs de 15 ans ou plus. 
-# Source : Insee, enquête Emploi. 
+# Champ : France métropolitaine, population des ménages, actifs de 15 ans ou plus.
+# Source : Insee, enquête Emploi.
 # 2015
 
 ### reference_activite: lecture de la table de référence
@@ -92,6 +92,7 @@ test_activite = distance_to_reference(population, reference_activite, sample_siz
 print ("Test effectifs simulés pour activité :")
 print(test_activite['ratio'].describe())
 
+del population['classe_age']
 
 ## Emploi : à partir du taux de chomaĝe
 # Indicatrice : 1 si emploi
@@ -146,15 +147,15 @@ nbr_population_active_ech = population.loc[ population['activite'] == True, 'act
 taux_chomage_genere = len(population_chomage.index) / nbr_population_active_ech
 print ("Taux de chômage généré : ", taux_chomage_genere*100)
 
-
+del population['classe_age_chomage']
 
 ### Salaire
 # Salaire brut horaire moyen (€)
-# Champ : 
+# Champ :
 #   - salariés du secteur privé ou d'une entreprise publique, hors agriculture, y compris bénéficiaires de contrats aidés et chefs d'entreprises salariés ;
 #   - sont exclus, les apprentis, les stagiaires, les salariés agricoles et les salariés des particuliers employeurs.
 #   - France entière y compris DOM.
-#Source : Insee, DADS 2012. 
+#Source : Insee, DADS 2012.
 
 
 reference_salaire = pd.read_csv("data/travail/salaire_brut_horaire.csv")
@@ -182,12 +183,13 @@ population = get_classes_age(population,
 population = population.merge(reference_salaire, how='left', on=['sexe', 'classe_age_salaire', 'emploi'])
 population['salaire'].fillna(0, inplace=True)
 
+del population['classe_age_salaire']
 ### Retraite
 
 ## INSEE 2012
 # Montant moyen mensuel de la retraite globale
-# Champ : retraités de droit direct, âgés de 65 ans ou plus, 
-#       nés en France ou à l'étranger, résidents en France ou à l'étranger. 
+# Champ : retraités de droit direct, âgés de 65 ans ou plus,
+#       nés en France ou à l'étranger, résidents en France ou à l'étranger.
 #       Les retraités ne percevant qu'une pension de réversion sont exclus.
 # Source : Drees, échantillon interrégimes de retraités 2012.
 
@@ -195,8 +197,8 @@ reference_retraite = pd.read_csv("data/travail/retraite_2012.csv")
 reference_retraite = pd.melt(reference_retraite, id_vars=['classe_age_retraite'],
                              value_vars=['femme', 'homme'], var_name = 'sexe',
                              value_name='retraite')
-                             
-classes_age_retraite = reference_retraite['classe_age_retraite'].str.replace(' ans|', '')                            
+
+classes_age_retraite = reference_retraite['classe_age_retraite'].str.replace(' ans', '')
 classes_age_retraite = classes_age_retraite.str.replace(' à ', '-')
 classes_age_retraite = classes_age_retraite.str.replace(' et plus', '-' + str(max_age))
 reference_retraite['classe_age_retraite'] = classes_age_retraite
@@ -206,12 +208,222 @@ reference_retraite['activite'] = np.bool(False)
 population = get_classes_age(population,
                                      'age',
                                      classes_age_retraite)
-                                     
+
 population = population.merge(reference_retraite, how='left', on=['sexe', 'classe_age_retraite', 'activite'])
 population['retraite'].fillna(0, inplace=True)
 
 assert population.loc[population['retraite'] != 0, 'age'].min() == 65, "On ne peut toucher de retraite avant 65 ans"
 
+del population['classe_age_retraite']
+### Étudiants
+
+# Entre 15 ans et 25 ans
+# Délibérement pas de distinction de sexe (pas de chiffres précis au niveau de l'âge)
+
+# Note : les millésimes correspondent à la rentrée scolaire.
+# Champ : France (hors Mayotte), enseignement public et privé, y c. scolarisation en apprentissage.
+# Source : Depp. 2013
+
+reference_etudes = pd.read_csv("data/demographie/etudes.csv")
+
+reference_etudes['age'] = reference_etudes['age'].str.replace(' ans', '')
+reference_etudes['proba_etudes'] /= 100
+reference_etudes['age'] = pd.to_numeric(reference_etudes['age'])
+
+# Comparaison avec le taux genere des non-actifs jeunes
+proba_generee = population[(population['age'] < 26) & (population['age'] > 14)].groupby(['age']).mean()[['activite', 'emploi']]
+proba_generee = proba_generee.reset_index()
+#proba_generee.rename(columns = {'activite':'proba_generee'}, inplace = True)
+proba_generee['activite'] = 1 - proba_generee['activite']
+proba_generee['emploi'] = 1 - proba_generee['emploi']
+reference_etudes = reference_etudes.merge(proba_generee, on = ['age'], how='left')
+
+
+population_etudes = population.copy()
+population_etudes = population_etudes.merge(reference_etudes, on = ['age'], how='left')
+population_etudes.loc[population_etudes['age'] < 15, 'proba_etudes'] = 1
+population_etudes.loc[population_etudes['age'] > 25, 'proba_etudes'] = 0
+population['etudes'] = np.random.binomial(1, population_etudes['proba_etudes'])
+population['etudes'] = population['etudes'].astype(bool)
+
+population_jeune = population[(population['age'] > 17) & (population['age'] < 25)]
+proportion_etude_emploi = (len(population_jeune[(population_jeune['emploi'] == True) & (population_jeune['etudes'] == True)])/ population_jeune['etudes'].sum()) * 100
+print( " Pourcentage d'étudiants en emploi", proportion_etude_emploi) 
+# Selon une étude INSEE (2016) -> 23%/
+# http://www.insee.fr/fr/themes/document.asp?reg_id=0&ref_id=ip1603#inter6
+
+#### Handicap
+
+reference_handicap = pd.read_csv("data/demographie/handicap_pop.csv")
+
+reference_handicap['homme'] *= reference_handicap.iloc[4,1]/100
+reference_handicap['femme'] *= reference_handicap.iloc[4,2]/100
+reference_handicap['femme']
+
+
+reference_handicap = reference_handicap.drop(reference_handicap.index[4])
+                             
+
+# Ajout jeune handicap
+#Table issue du mode de scolarisation -> création artificielle de la catégorie sexe
+
+reference_handicap_jeune = pd.read_csv("data/demographie/handicap_pop_jeune.csv")
+
+reference_handicap_jeune['femme'] = reference_handicap_jeune['effectif'] / 2
+reference_handicap_jeune['homme'] = reference_handicap_jeune['effectif'] / 2
+
+del reference_handicap_jeune['effectif']
+
+reference_handicap = pd.concat([reference_handicap_jeune, reference_handicap])
+
+                            
+classes_age_handicap = reference_handicap['classe_age_handicap'].str.replace(' ans', '')
+classes_age_handicap = classes_age_handicap.str.replace(' à ', '-')
+reference_handicap['classe_age_handicap'] = classes_age_handicap
+
+reference_handicap = pd.melt(reference_handicap, id_vars=['classe_age_handicap'],
+                             value_vars=['femme', 'homme'], var_name = 'sexe',
+                             value_name='effectif')
+##
+
+effectifs_age_sexe = get_classes_age(effectifs_age_sexe,
+                                     'age',
+                                     classes_age_handicap)
+
+
+##### reference_handicap : création de la colonne proba_handicap
+reference_handicap = ajout_effectif_reference(reference_handicap,
+                                              effectifs_age_sexe,
+                                              'effectif_ref',
+                                              ['sexe', 'classe_age_handicap'])
+                                       
+reference_handicap['proba_handicap'] = reference_handicap['effectif']/reference_handicap['effectif_ref']
+reference_handicap['proba_handicap_actif'] = reference_handicap['proba_handicap']* 2/3
+
+population = get_classes_age(population, 'age', classes_age_handicap)
+
+
+population_handicap = population.copy()
+population_handicap = population_handicap.merge(reference_handicap, on=['classe_age_handicap', 'sexe'], how='outer')
+population_handicap['proba_handicap'].fillna(0, inplace=True)
+population['handicap'] = np.random.binomial(1, population_handicap['proba_handicap'])
+population.loc[population['activite']== True]
+population['handicap'] = population['handicap'].astype(bool)
+
+# Ajout des effectifs des non actifs
+reference_handicap = from_unique_value_reference_to_standard_reference(
+    reference_handicap,
+    'handicap')
+#### Vérifier que le tirage se rapproche de la réalité
+test_handicap = distance_to_reference(population, reference_handicap, sample_size,
+                     ['sexe', 'classe_age_handicap', 'handicap'],
+                     nb_modalite=2)
+print ("Test effectifs simulés pour activité :")
+print(test_handicap['ratio'].describe())
+
+del population['classe_age_handicap']  
+
+# Comparaison avec chiffre sur activite des handicapés
+
+population_handicapee = population[(population['handicap'] == True) & (population['age'] > 14) & (population['age'] < 65)]
+proportion_handicap_emploi = (len(population_handicapee[population_handicapee['emploi'] == True])/ len(population_handicapee)) * 100
+proportion_handicap_activite = (len(population_handicapee[population_handicapee['activite'] == True])/ len(population_handicapee)) * 100
+
+print( " Pourcentage d'handicapés en emploi", proportion_handicap_emploi) 
+print( " Pourcentage d'handicapés en activite", proportion_handicap_activite) 
+
+#### Statut marital
+
+# Variable catégorielle
+# Célibataire = '0'', 
+# Marié.e = '1',
+# Veuf.ve = '2'
+# Divorcé.e = '3'
+
+reference_marital = dict()
+for sexe in ['homme', 'femme']:
+    reference_marital[sexe] = pd.read_csv("data/menages/statut_marital_{0}.csv".format(sexe))
+    reference_marital[sexe][['celib', 'marrie', 'veuf', 'divorce']] = reference_marital[sexe][['celib', 'marrie', 'veuf', 'divorce']].div(reference_marital[sexe]['total'], axis=0)
+    del reference_marital[sexe]['total']
+    
+reference_marital = pd.concat([pd.DataFrame(reference_marital['femme']), pd.DataFrame(reference_marital['homme'])], keys=['femme', 'homme'])
+
+reference_marital.index.names = ['sexe', 'index']
+reference_marital = reference_marital.reset_index(level=['sexe'])
+
+
+population_marital = population.copy()
+population_marital = population_marital.merge(reference_marital, on= ['sexe', 'age'] )
+
+population['statut_marital'] = ''
+for row in population_marital.index:
+    population.loc[row,'statut_marital'] = np.random.choice(4, 1, p=pd.to_numeric(population_marital.loc[row, 'celib':'divorce']))
+
+population['statut_marital'] = population['statut_marital'].astype(int)
+
+population['statut_marital']
+
+print("Proportion générée des statuts maritaux :")
+print(population[population['age'] >=15].statut_marital.value_counts(normalize=True, sort=False))
+
+
+
+# Beaucoup trop d'handicapés actifs 
+  
+#### RSA
+#reference_rsa = pd.read_csv("data/prestations/rsa_age_2015.csv")
+#
+#reference_rsa = reference_rsa[reference_rsa['Composante'] == 'Socle seul']
+#
+#del reference_rsa['Composante']
+#
+#classes_age_rsa = reference_rsa['classe_age_rsa'].str.replace('De | ans', '', case=False)
+#classes_age_rsa = classes_age_rsa.str.replace(' à ', '-')
+#classes_age_rsa = classes_age_rsa.str.replace('moins ', '18-')
+#classes_age_rsa = classes_age_rsa.str.replace(' ou plus', '-' + str(max_age))
+#reference_rsa['classe_age_rsa'] = classes_age_rsa
+#
+## Affiner avec l'identité sexuelle
+## récupérer une proportion grossiere de la répartition des allocataires entre femme et homme
+#
+#reference_sexe_rsa = pd.read_csv("data/prestations/rsa_sexe_2015.csv")
+#reference_sexe_rsa = reference_sexe_rsa[reference_sexe_rsa['Composante'] == 'Socle seul']
+#
+#nbr_femme_rsa = int(reference_sexe_rsa.loc[reference_sexe_rsa['Type_Famille_RSA'] == 'Femme seule sans enfant', 'effectif'])
+#nbr_homme_rsa = int(reference_sexe_rsa.loc[reference_sexe_rsa['Type_Famille_RSA'] == 'Homme seul sans enfant', 'effectif'])
+#
+#proportion_femme_rsa = nbr_femme_rsa / (nbr_femme_rsa + nbr_homme_rsa)
+#
+#reference_rsa['femme'] = reference_rsa['effectif']*proportion_femme_rsa
+#reference_rsa['homme'] = reference_rsa['effectif']*(1 - proportion_femme_rsa)
+#del reference_rsa['effectif']
+#
+#reference_rsa = pd.melt(reference_rsa, id_vars=['classe_age_rsa'],
+#                             value_vars=['femme', 'homme'], var_name = 'sexe',
+#                             value_name='effectif')
+#reference_rsa['handicap'] = np.bool(False)
+#
+#population = get_classes_age(population,
+#                                     'age',
+#                                     classes_age_rsa)
+#
+#population['pop_active'] = population['activite']
+#
+#reference_rsa = ajout_effectif_reference(reference_rsa,
+#                                         population[population['activite'] ==  False],
+#                                         'pop_active',
+#                                       ['sexe', 'classe_age_rsa'])
+#del population['pop_active']
+#
+#reference_rsa['proba_rsa'] = reference_rsa['effectif']/reference_rsa['effectif_ref']
+#
+#tab_ref =  population[population['activite'] ==  False]
+#groupby = ['sexe', 'classe_age_rsa']
+#col_ref = 'pop_active'
+#reference = tab_ref.groupby(groupby)[col_ref].size()
+#
+#reference = reference.reset_index()
+#output = tab_init.merge(reference, on=groupby, how='left')
 ####Heures travaillées
 #reference_heures_travaillees = pd.read_csv("data/travail/nbr_heure_travaillees.csv")
 #reference_heures_travaillees = pd.melt(reference_emploi, id_vars=['classe_age_salaire'],
