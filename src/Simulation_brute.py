@@ -7,7 +7,7 @@ from tools import (distance_to_reference, get_proba, get_classes_age,
     ajout_effectif_reference,
     from_unique_value_reference_to_standard_reference)
 
-sample_size_target = 10000
+sample_size_target = 1000
 
 
 ##### Sexe et Age
@@ -258,8 +258,6 @@ reference_handicap = pd.read_csv("data/demographie/handicap_pop.csv")
 
 reference_handicap['homme'] *= reference_handicap.iloc[4,1]/100
 reference_handicap['femme'] *= reference_handicap.iloc[4,2]/100
-reference_handicap['femme']
-
 
 reference_handicap = reference_handicap.drop(reference_handicap.index[4])
                              
@@ -298,16 +296,16 @@ reference_handicap = ajout_effectif_reference(reference_handicap,
                                               ['sexe', 'classe_age_handicap'])
                                        
 reference_handicap['proba_handicap'] = reference_handicap['effectif']/reference_handicap['effectif_ref']
-reference_handicap['proba_handicap_actif'] = reference_handicap['proba_handicap']* 2/3
 
 population = get_classes_age(population, 'age', classes_age_handicap)
 
 
 population_handicap = population.copy()
 population_handicap = population_handicap.merge(reference_handicap, on=['classe_age_handicap', 'sexe'], how='outer')
+# Pas d'infos concernant les handicapés de plus de 64 ans
 population_handicap['proba_handicap'].fillna(0, inplace=True)
 population['handicap'] = np.random.binomial(1, population_handicap['proba_handicap'])
-population.loc[population['activite']== True]
+
 population['handicap'] = population['handicap'].astype(bool)
 
 # Ajout des effectifs des non actifs
@@ -340,14 +338,22 @@ print( " Pourcentage d'handicapés en activite", proportion_handicap_activite)
 # Veuf.ve = '2'
 # Divorcé.e = '3'
 
+# Champ : France inclus Mayotte
+# Source : Insee, estimations de population, 2015
+
+# lecture de la table -> dictionnaire pour boucler dessus
+
 reference_marital = dict()
 for sexe in ['homme', 'femme']:
     reference_marital[sexe] = pd.read_csv("data/menages/statut_marital_{0}.csv".format(sexe))
     reference_marital[sexe][['celib', 'marrie', 'veuf', 'divorce']] = reference_marital[sexe][['celib', 'marrie', 'veuf', 'divorce']].div(reference_marital[sexe]['total'], axis=0)
     del reference_marital[sexe]['total']
     
-reference_marital = pd.concat([pd.DataFrame(reference_marital['femme']), pd.DataFrame(reference_marital['homme'])], keys=['femme', 'homme'])
+reference_marital = pd.concat([pd.DataFrame(reference_marital['femme']), 
+                                            pd.DataFrame(reference_marital['homme'])], 
+                                                         keys=['femme', 'homme'])
 
+# Associer à la table population -> transformation en DataFrame
 reference_marital.index.names = ['sexe', 'index']
 reference_marital = reference_marital.reset_index(level=['sexe'])
 
@@ -355,18 +361,30 @@ reference_marital = reference_marital.reset_index(level=['sexe'])
 population_marital = population.copy()
 population_marital = population_marital.merge(reference_marital, on= ['sexe', 'age'] )
 
+# Attribution du statut -> colonne "Statut_marital" de la table "Population"
 population['statut_marital'] = ''
-for row in population_marital.index:
-    population.loc[row,'statut_marital'] = np.random.choice(4, 1, p=pd.to_numeric(population_marital.loc[row, 'celib':'divorce']))
 
-population['statut_marital'] = population['statut_marital'].astype(int)
+#population['statut_marital'] = population_marital.apply(lambda row: np.random.choice(4, 1, p=[row['celib'], row['marrie'], row['veuf'], row['divorce']]), axis=1)
 
-population['statut_marital']
+def get_statut_marital(table, col):
+    table[col] = population_marital.apply(lambda row: np.random.choice(4, 1, p=[row['celib'], row['marrie'], row['veuf'], row['divorce']]), axis=1)
+    # Gérer le nbr de femmes mariées vs le nbr d'hommes mariés    
+    table_mariage = table[table[col] == 1]    
+    if len(table_mariage[table_mariage.sexe == 'homme']) != len(table_mariage[table_mariage.sexe == 'femme']):
+        return get_statut_marital(table, col)
+    return table[col]
+
+population['statut_marital'] = get_statut_marital(population, 'statut_marital')
 
 print("Proportion générée des statuts maritaux :")
 print(population[population['age'] >=15].statut_marital.value_counts(normalize=True, sort=False))
 
+# Mise en couple
 
+
+
+
+#    if len(population[(population.statut_marital == 0) & (population.sexe == 'homme')]) != len(population[(population.statut_marital == 0) & (population.sexe == 'femme')])
 
 # Beaucoup trop d'handicapés actifs 
   
