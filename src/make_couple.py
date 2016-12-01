@@ -69,33 +69,29 @@ def find_femme(table,age):
 
 def generate_pop_men(population):    
     # Associer les femmes et les hommes
+    
     pop_homme = population[(population['statut_marital'] == 1) & (population['sexe'] == 'homme')]
+    pop_homme = pop_homme.reset_index(drop=True)    
     pop_femme = population[(population['statut_marital'] == 1) & (population['sexe'] == 'femme')]
-        
+    pop_femme = pop_femme.reset_index(drop=True)    
     # Construire la table ménage
-    index= np.arange(len(population[population['statut_marital'] == 1]))
+    index= np.arange(len(pop_femme))
     
     population_menage = pd.DataFrame(index=index, columns = population.columns)
-    population_menage['ident_men']=''
     
-    y=0
+    
     for x in np.arange(len(pop_homme)):
     
         homme = pop_homme.iloc[x]
         femme = find_femme(pop_femme, homme['age']).iloc[0]
-    
-        population_menage.iloc[y]=femme
-        population_menage.iloc[y]['ident_men'] = x
-        population_menage.iloc[y+1]=homme
-        population_menage.iloc[y+1]['ident_men'] = x
-        y +=2
+        pop_femme.iloc[x]=femme
+ 
+    pop_homme.columns = [x+'_conj' for x in pop_homme.columns] 
+    population_menage = pd.concat([pop_femme, pop_homme], axis=1)      
         
     # Préparer la colonne ident_men pour les autres types de ménages
     population_autre_couple = population[population['statut_marital'] != 1]
-    
-    population_autre_couple['ident_men'] = np.arange(len(pop_femme),
-                                            len(pop_femme) + len(population_autre_couple))
-    
+  
     population_menage = pd.concat([population_menage,population_autre_couple])
     
     return population_menage

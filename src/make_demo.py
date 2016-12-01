@@ -163,34 +163,31 @@ def generate_Handicap(reference_handicap, reference_handicap_jeune, population, 
                                            
     reference_handicap['proba_handicap'] = reference_handicap['effectif']/reference_handicap['effectif_ref']
     
-    population = get_classes_age(population, 'age', classes_age_handicap)
-      
     population_handicap = population.copy()
+    population_handicap = get_classes_age(population_handicap, 'age', classes_age_handicap)
     population_handicap = population_handicap.merge(reference_handicap, on=['classe_age_handicap', 'sexe'], how='outer')
     # Pas d'infos concernant les handicapés de plus de 64 ans
     population_handicap['proba_handicap'].fillna(0, inplace=True)
-    population['handicap'] = np.random.binomial(1, population_handicap['proba_handicap'])
-    population['handicap'] = population['handicap'].astype(bool)
+    population_handicap['handicap'] = np.random.binomial(1, population_handicap['proba_handicap'])
+    population_handicap['handicap'] = population_handicap['handicap'].astype(bool)
     
     # Ajout des effectifs des non actifs
     reference_handicap = from_unique_value_reference_to_standard_reference(
         reference_handicap,
         'handicap')
     #### Vérifier que le tirage se rapproche de la réalité
-    test_handicap = distance_to_reference(population, reference_handicap, sample_size,
+    test_handicap = distance_to_reference(population_handicap, reference_handicap, sample_size,
                          ['sexe', 'classe_age_handicap', 'handicap'],
                          nb_modalite=2)
     print ("Test effectifs simulés pour activité :")
     print(test_handicap['ratio'].describe())
-    
-    del population['classe_age_handicap']  
-    
+       
     # Comparaison avec chiffre sur activite des handicapés
     
-    population_handicapee = population[(population['handicap'] == True) & (population['age'] > 14) & (population['age'] < 65)]
+    population_handicapee = population_handicap[(population_handicap['handicap'] == True) & (population_handicap['age'] > 14) & (population_handicap['age'] < 65)]
     proportion_handicap_emploi = (len(population_handicapee[population_handicapee['emploi'] == True])/ len(population_handicapee)) * 100
     proportion_handicap_activite = (len(population_handicapee[population_handicapee['activite'] == True])/ len(population_handicapee)) * 100
     
     print( " Pourcentage d'handicapés en emploi", proportion_handicap_emploi) 
     print( " Pourcentage d'handicapés en activite", proportion_handicap_activite)  
-    return population['handicap']
+    return population_handicap['handicap']

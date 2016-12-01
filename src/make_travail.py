@@ -47,7 +47,8 @@ def generate_Activite(reference_activite, effectifs_age_sexe, population, sample
     
     reference_activite['proba_activite'] = reference_activite['effectif']/reference_activite['effectif_ref']
     
-    population_activite = get_classes_age(population, 'age', classes_age)
+    population_activite = population.copy()
+    population_activite = get_classes_age(population_activite, 'age', classes_age)
     population_activite = population_activite.merge(reference_activite, how='outer')
     
     population_activite['activite'] = np.random.binomial(1, population_activite['proba_activite'])
@@ -86,7 +87,8 @@ def generate_Emploi(reference_emploi, population, max_age):
     reference_emploi['proba_emploi'] = 1 - reference_emploi['taux_chomage']
     
     ### Récupération du nbr d'actif dans les classes d'âge de l'emploi
-    population_emploi = get_classes_age(population,
+    population_emploi = population.copy()
+    population_emploi = get_classes_age(population_emploi,
                                          'age',
                                          classes_age_chomage)
     
@@ -113,11 +115,11 @@ def generate_Emploi(reference_emploi, population, max_age):
     
     # Taux de chômage population générée
     population_chomage = population_emploi[(population_emploi['activite'] == True) & (population_emploi['emploi'] == False)]
-    nbr_population_active_ech = population_emploi.loc[ population_emploi['activite'] == True, 'activite'].sum()
     taux_chomage_genere = len(population_chomage.index) / nbr_population_active_ech
     print ("Taux de chômage généré : ", taux_chomage_genere*100)
        
     return population_emploi['emploi']
+
 
 def add_Salaire(reference_salaire, population, max_age):
     """    
@@ -146,7 +148,8 @@ def add_Salaire(reference_salaire, population, max_age):
     reference_salaire['salaire'] *= duree_travail_legal_mois
     reference_salaire['emploi'] = np.bool(True)
     
-    population_salaire = get_classes_age(population,
+    population_salaire = population.copy()
+    population_salaire = get_classes_age(population_salaire,
                                          'age',
                                          classes_age_salaire)
     
@@ -178,7 +181,8 @@ def add_Retraite(reference_retraite, population, max_age):
     
     reference_retraite['activite'] = np.bool(False)
     
-    population_retraite = get_classes_age(population,
+    population_retraite = population.copy()
+    population_retraite = get_classes_age(population_retraite,
                                          'age',
                                          classes_age_retraite)
     
