@@ -62,7 +62,7 @@ population['handicap'] = generate_Handicap(reference_handicap, reference_handica
 reference_marital = dict()
 for sexe in ['homme', 'femme']:
     reference_marital[sexe] = pd.read_csv("data/menages/statut_marital_{0}.csv".format(sexe))
-population['statut_marital'] = generate_Couple(reference_marital, population)
+population['statut_marital'] = generate_Couple(reference_marital.copy(), population)
 
 
 ''''
@@ -71,8 +71,8 @@ TABLE MÉNAGE
 
 population_menage = generate_pop_men(population)
 
-
-
+##### Le fait d'avoir un.des enfant.s
+reference_typefam = pd.read_csv('data/menages/enfants/type_famille.csv')
 
 
 
