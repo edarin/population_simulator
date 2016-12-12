@@ -9,7 +9,10 @@ from make_travail import (generate_Activite,
                           add_Retraite,
                           generate_Etudiants)
 from make_couple import (generate_Couple,
-                        generate_pop_men)                          
+                        generate_pop_men)
+from make_children import (generate_Children
+                           #add_Children
+                           )                          
 
 sample_size_target = 1000
 
@@ -69,13 +72,14 @@ population['statut_marital'] = generate_Couple(reference_marital.copy(), populat
 TABLE MÉNAGE
 '''''
 
-population_menage = generate_pop_men(population)
+population_menage = generate_pop_men(population[population['age'] >= 15])
 
 ##### Le fait d'avoir un.des enfant.s
 reference_typefam = pd.read_csv('data/menages/enfants/type_famille.csv')
+population_menage[['type_fam', 'enfant']] = generate_Children(reference_typefam, population_menage)
 
-
-
+reference_enfant = pd.read_csv('data/menages/enfants/nbr_enfant.csv')
+population_menage['nb_enf'] = add_Children(reference_enfant, population_menage)
 
 
 
