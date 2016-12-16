@@ -72,6 +72,7 @@ TABLE MÉNAGE
 '''''
 
 population_menage = generate_pop_men(population[population['age'] >= 15])
+population_menage.reset_index(drop= True, inplace= True)
 
 ##### Le fait d'avoir un.des enfant.s
 reference_typefam = pd.read_csv('data/menages/enfants/type_famille.csv')
@@ -80,7 +81,7 @@ population_menage[['type_fam', 'enfant']] = generate_Children(reference_typefam,
 reference_enfant = pd.read_csv('data/menages/enfants/nbr_enfant.csv')
 population_menage['nb_enf'] = add_Children(reference_enfant, population_menage)
 
-
+population_menage.to_csv('population_simulated.csv')
 
 
 

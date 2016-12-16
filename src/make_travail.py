@@ -170,12 +170,14 @@ def put_Salaire(population, sexe, condition_age, k, salaire = salaire):
     condition_emploi = (population.emploi == True)  
     personnes = population[condition_sexe & condition_age & condition_emploi]
     
-    salaire_filtered = pd.DataFrame(salaire[k])
+    salaire_filtered = pd.DataFrame(salaire[k], dtype = np.int64).astype(np.int64)
+    
     salaire_filtered.rename(columns={0: 'valeur'}, inplace=True)
+    
     salaire_filtered = salaire_filtered[salaire_filtered.valeur >= 0]
     
     population.loc[condition_age & condition_sexe & condition_emploi, 'salaire'] = salaire_filtered[:len(personnes)].values
-    
+    population.salaire = pd.to_numeric(population.salaire)    
     return population
 
 
@@ -199,7 +201,7 @@ def add_SalairefromERFS(population, salaire):
         if age == "'<23'" :
             condition_age = (population.age <= 23)
             population = put_Salaire(population, sexe, condition_age, k)
-            
+    population.loc[population.emploi == False, 'salaire'] = 0
     return population['salaire']
     
 def add_Retraite(reference_retraite, population, max_age):

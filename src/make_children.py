@@ -28,15 +28,16 @@ def generate_Children(reference_typefam, population_menage):
     for sexe in ['femme', 'homme']:
         population_enfant.loc[(population_enfant['statut_marital'] != 1) & (population_enfant['sexe'] == sexe), 'type_fam'] = '{0} solo'.format(sexe)
     
-    population_enfant = population_enfant.merge(reference_typefam, how='outer', on='type_fam')
+    population_enfant = population_enfant.merge(reference_typefam, how='inner', on='type_fam')
     
     
     population_enfant['enfant'] = np.random.binomial(1, population_enfant['proba'])
     population_enfant['enfant'] = population_enfant['enfant'].astype(bool)
+    population_test = population_enfant
     test_enfant = distance_to_reference(
-                        population_simulee = population_enfant[population_enfant['enfant'] == True], 
+                        population_simulee = population_test[population_test['enfant'] == True], 
                         reference = reference_typefam, 
-                        sample_size = len(population_enfant),
+                        sample_size = len(population_test),
                         groupby = 'type_fam',
                          )
     print ("Test effectifs simulés pour le nbr de ménages ayant des enfants :")
@@ -62,7 +63,7 @@ def add_Children(reference_enfant, population_menage):
         population_enfant.loc[condition, 'nb_enf'] = np.random.choice(np.arange(1,5), nb_menage, p=reference_enfant.loc[type_fam, 'proba'])
     
     print("Équivalent du taux de fécondité :")
-    print(population_enfant.loc[(population_enfant.enfant == True) & (population_enfant.sexe == 'femme'), 'nb_enf'].mean())
+    print(population_enfant.loc[(population_enfant.enfant == True), 'nb_enf'].mean())
 
     return population_enfant['nb_enf']
 
