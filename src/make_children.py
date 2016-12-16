@@ -32,9 +32,9 @@ def generate_Children(reference_typefam, population_menage):
     
     
     population_enfant['enfant'] = np.random.binomial(1, population_enfant['proba'])
-
+    population_enfant['enfant'] = population_enfant['enfant'].astype(bool)
     test_enfant = distance_to_reference(
-                        population_simulee = population_enfant[population_enfant['enfant'] == 1], 
+                        population_simulee = population_enfant[population_enfant['enfant'] == True], 
                         reference = reference_typefam, 
                         sample_size = len(population_enfant),
                         groupby = 'type_fam',
@@ -44,31 +44,27 @@ def generate_Children(reference_typefam, population_menage):
     
     return population_enfant[['type_fam', 'enfant']]
     
-#def add_Children(reference_enfant, population_menage):
-reference_enfant = pd.melt(reference_enfant, id_vars=['type_fam'], 
-                       var_name = 'nb_enf', value_name = 'effectif' )
+def add_Children(reference_enfant, population_menage):
+    reference_enfant = pd.melt(reference_enfant, id_vars=['type_fam'], 
+                           var_name = 'nb_enf', value_name = 'effectif' )
+    
+    reference_enfant['proba'] = reference_enfant.groupby('type_fam')['effectif'].apply(lambda x: x/sum(x))
+    
+    reference_enfant.set_index('type_fam', inplace = True)
+    
+    
+    population_enfant = population_menage.copy()
+    population_enfant['nb_enf'] = 0
+    
+    for type_fam in ['Couples', 'homme solo', 'femme solo']:
+        condition = (population_enfant['enfant'] == True) & (population_enfant['type_fam'] == type_fam)
+        nb_menage = len(population_enfant.loc[condition, 'nb_enf'])
+        population_enfant.loc[condition, 'nb_enf'] = np.random.choice(np.arange(1,5), nb_menage, p=reference_enfant.loc[type_fam, 'proba'])
+    
+    print("Équivalent du taux de fécondité :")
+    print(population_enfant.loc[(population_enfant.enfant == True) & (population_enfant.sexe == 'femme'), 'nb_enf'].mean())
 
-reference_enfant['proba'] = reference_enfant.groupby('type_fam')['effectif'].apply(lambda x: x/sum(x))
-
-reference_enfant.set_index('type_fam', inplace = True)
-
-
-population_enfant = population_menage.copy()
-population_enfant['nb_enf'] = 0
-
-for type_fam in ['Couples', 'homme solo', 'femme solo']:
-    condition = (population_enfant['enfant'] == 1) & (population_enfant['type_fam'] == type_fam)
-    nb_menage = len(population_enfant.loc[condition, 'nb_enf'])
-    population_enfant.loc[condition, 'nb_enf'] = np.random.choice(np.arange(1,5), nb_menage, p=reference_enfant.loc[type_fam, 'proba'])
-
-population_simulee = population_enfant[population_enfant['nb_enf'] !=0]
-groupby = ['type_fam', 'nb_enf']
-reference = reference_enfant.reset_index()
-
-test_activite = distance_to_reference(population_simulee, reference, sample_size, groupby,
-                 nb_modalite=1)
-
-#return population_enfant['nb_enf']
+    return population_enfant['nb_enf']
 
 
 

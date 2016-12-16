@@ -10,6 +10,7 @@ import numpy as np
 from tools import (distance_to_reference, get_proba, get_classes_age,
     ajout_effectif_reference,
     from_unique_value_reference_to_standard_reference)
+from tools_erfs import open_json
     
 def generate_Activite(reference_activite, effectifs_age_sexe, population, sample_size):
     """
@@ -121,7 +122,7 @@ def generate_Emploi(reference_emploi, population, max_age):
     return population_emploi['emploi']
 
 
-def add_Salaire(reference_salaire, population, max_age):
+def add_Salaire_fromINSEE(reference_salaire, population, max_age):
     """    
     ### Salaire
     # Salaire brut horaire moyen (€)
@@ -158,7 +159,49 @@ def add_Salaire(reference_salaire, population, max_age):
     population_salaire['salaire'].fillna(0, inplace=True)
     
     return population_salaire['salaire']
+    
+salaire = open_json('data/travail/salaire_sexe_age.json')
 
+def put_Salaire(population, sexe, condition_age, k, salaire = salaire):
+    '''
+    Automatisation de l'adjonction du salaire depui
+    '''
+    condition_sexe = (population.sexe == sexe) 
+    condition_emploi = (population.emploi == True)  
+    personnes = population[condition_sexe & condition_age & condition_emploi]
+    
+    salaire_filtered = pd.DataFrame(salaire[k])
+    salaire_filtered.rename(columns={0: 'valeur'}, inplace=True)
+    salaire_filtered = salaire_filtered[salaire_filtered.valeur >= 0]
+    
+    population.loc[condition_age & condition_sexe & condition_emploi, 'salaire'] = salaire_filtered[:len(personnes)].values
+    
+    return population
+
+
+def add_SalairefromERFS(population, salaire):
+    population['salaire'] = ''
+    
+    for k in salaire.keys():
+        
+        age = k.split(', ')[1].strip(')')
+        sexe = k.split(', ')[0].strip("('")
+        
+        if (age != "'>60'") and (age != "'<23'"):
+            age = int(age)
+            condition_age = (population.age == age)
+            population = put_Salaire(population, sexe, condition_age, k)       
+            
+        if age == "'>60'":
+            condition_age = (population.age >= 60)
+            population = put_Salaire(population, sexe, condition_age, k)
+            
+        if age == "'<23'" :
+            condition_age = (population.age <= 23)
+            population = put_Salaire(population, sexe, condition_age, k)
+            
+    return population['salaire']
+    
 def add_Retraite(reference_retraite, population, max_age):
     """
     ### Retraite

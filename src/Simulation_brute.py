@@ -3,17 +3,12 @@ import numpy as np
 import pandas as pd
 
 from make_demo import (generate_SexeAge, generate_Handicap)
-from make_travail import (generate_Activite, 
-                          generate_Emploi, 
-                          add_Salaire,
-                          add_Retraite,
-                          generate_Etudiants)
+from make_travail import *
 from make_couple import (generate_Couple,
                         generate_pop_men)
-from make_children import (generate_Children
-                           #add_Children
+from make_children import (generate_Children,
+                           add_Children
                            )                          
-
 sample_size_target = 1000
 
 ''''
@@ -42,7 +37,11 @@ population['emploi'] = generate_Emploi(reference_emploi, population, max_age)
 
 # Salaire
 reference_salaire = pd.read_csv("data/travail/salaire_brut_horaire.csv")
-population['salaire'] = add_Salaire(reference_salaire,population, max_age)
+#population['salaire'] = add_Salaire_fromINSEE(reference_salaire,population, max_age)
+
+salaire = open_json('data/travail/salaire_sexe_age.json')
+population['salaire'] = add_SalairefromERFS(population, salaire)
+
 
 # Retraite
 reference_retraite = pd.read_csv("data/travail/retraite_2012.csv")
