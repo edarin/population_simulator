@@ -2,10 +2,10 @@
 
 ## What is the idea ?
 
-We decided to generate a population in an iterative manner. 
+We've decided to generate a population in an iterative manner. 
 We construct the database by adding each variable separetely based on its joint distribution over prior created variables.
 
-For example:
+*Example*:
   - First step : generating a population of 1000 `persons`, ie 1000 rows.     
   - Second step: attributing a `sexe` to each person, given the proportion of women and men in the real French population    
   - Third step : put an `age` to each person,  given the joint distribution of age and sexe in France
@@ -15,16 +15,18 @@ And so on
 
 ### Which variables ?
 We have now generated these variables in our population:
- - `sexe`
- - `age`
- - `marital_situation`
- - `spouse`
- - `pension`
- - `income`
- - `student` (beta)
- - `diasabled` (beta)  
+   - `sexe`
+   - `age`
+   - `marital_situation`
+   - `spouse`
+   - `pension`
+   - `income`
+   - `student` (beta)
+   - `diasabled` (beta)  
  
-And we've also create the possibilty of grouping persons in family, respecting the French family structure.
+And we've also created the possibilty of grouping persons in family, respecting the French family structure.
+
+If you want to add another variable, just fork this repo and find data on its conditionnal distribution in the French population !
 
 ### Where do they come from ?
 
@@ -44,9 +46,9 @@ To have an overview of the reference databases used, please see the [`https://gi
 
 We've created two metrics to see the discrepancy between the simulated distribution and the real one, to find in the `distance_to_reference` function in the [`tools.py`](tools.py).
 
-One is the ratio and its relative mean and standard error between the theoretical distributional and the one we obtain.
+One is the **ratio **and its relative mean and standard error between the theoretical distribution and the one we obtained.
 
-The other in the Mean Squared Prediction Error (MSE).
+The other in the **Mean Squared Prediction Error** (MSE).
 
 ### How to launch the script
 
