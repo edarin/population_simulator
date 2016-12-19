@@ -62,8 +62,10 @@ def generate_Activite(reference_activite, effectifs_age_sexe, population, sample
     test_activite = distance_to_reference(population_activite, reference_activite, sample_size,
                          ['sexe', 'classe_age', 'activite'],
                          nb_modalite=2)
-    print ("Test effectifs simulés pour activité :")
+    print ("Test du ratio pour activité :")
     print(test_activite['ratio'].describe())
+    print ("Test du MSE pour activité :")
+    print(test_activite['mse'].mean())
            
     return population_activite['activite'].astype(bool)    
 
@@ -111,9 +113,10 @@ def generate_Emploi(reference_emploi, population, max_age):
     test_emploi = test_emploi.merge(reference_emploi, on=['sexe', 'classe_age_chomage'])
     test_emploi['ratio'] = test_emploi['proba_generee'] / test_emploi['proba_emploi']
     
-    print ("Test effectifs simulés pour emploi :")
-    print(test_emploi['ratio'].describe())
     
+    print ("Test du ratio pour emploi :")
+    print(test_emploi['ratio'].describe())
+
     # Taux de chômage population générée
     population_chomage = population_emploi[(population_emploi['activite'] == True) & (population_emploi['emploi'] == False)]
     taux_chomage_genere = len(population_chomage.index) / nbr_population_active_ech

@@ -112,9 +112,11 @@ def generate_SexeAge(effectifs_age_sexe, sample_size_target):
     effectifs_age_sexe['effectif'] = effectifs_age_sexe['effectif_ref']
     test_age_sexe = distance_to_reference(population, effectifs_age_sexe, sample_size, ['age','sexe'])
     del effectifs_age_sexe['effectif']
-    print ("Test effectifs simulés pour âge et sexe :")
+    print ("Test du ratio pour âge et sexe :")
     print(test_age_sexe['ratio'].describe())
-    
+    print ("Test du MSE pour âge et sexe :")
+    print(test_age_sexe['mse'].mean())
+       
     return population, effectifs_age_sexe
 
 def generate_Handicap(reference_handicap, reference_handicap_jeune, population, effectifs_age_sexe, sample_size):
@@ -179,8 +181,10 @@ def generate_Handicap(reference_handicap, reference_handicap_jeune, population, 
     test_handicap = distance_to_reference(population_handicap, reference_handicap, sample_size,
                          ['sexe', 'classe_age_handicap', 'handicap'],
                          nb_modalite=2)
-    print ("Test effectifs simulés pour activité :")
+    print ("Test du ratio pour handicap :")
     print(test_handicap['ratio'].describe())
+    print ("Test du MSE pour handicap :")
+    print(test_handicap['mse'].mean())
        
     # Comparaison avec chiffre sur activite des handicapés
     

@@ -49,9 +49,10 @@ def generate_Children(reference_typefam, population_menage):
                         sample_size = len(population_test),
                         groupby = 'type_fam',
                          )
-    print ("Test effectifs simulés pour le nbr de ménages ayant des enfants :")
+    print ("Test ratio pour le nbr de ménages ayant des enfants :")
     print(test_enfant['ratio'].describe())
-    
+    print ("Test MSE pour le nbr de ménages ayant des enfants :")
+    print(test_enfant['mse'].mean())
     return population_enfant[['type_fam', 'enfant']]
     
 def add_Children(reference_enfant, population_menage):

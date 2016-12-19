@@ -55,7 +55,7 @@ def generate_Couple(reference_marital, population):
     
     print("Proportion générée des statuts maritaux :")
     print(population[population['age'] >=15].statut_marital.value_counts(normalize=True, sort=False))
-    
+    # TODO : le test
     return population['statut_marital']
 
 def find_femme(table,age):

@@ -9,7 +9,7 @@ from make_couple import (generate_Couple,
 from make_children import (generate_Children,
                            add_Children
                            )                          
-sample_size_target = 50000
+sample_size_target = 1000
 
 ''''
 TABLE INDIVIDUS
@@ -31,8 +31,6 @@ population['activite']= generate_Activite(reference_activite, effectifs_age_sexe
 
 #Emploi : à partir du taux de chomaĝe
 reference_emploi = pd.read_csv("data/travail/chomage.csv")
-
-
 population['emploi'] = generate_Emploi(reference_emploi, population, max_age)
 
 # Salaire
@@ -82,4 +80,5 @@ reference_enfant = pd.read_csv('data/menages/enfants/nbr_enfant.csv')
 population_menage['nb_enf'] = add_Children(reference_enfant, population_menage)
 
 print('Nombre de ménages final :', len(population_menage) )
-#population_menage.to_csv('population_simulated_6310.csv')
+population_menage.to_csv('population_simulated_men{0}.csv'.format(len(population_menage)))
+population.to_csv('population_simulated_ind{0}.csv'.format(len(population)))
