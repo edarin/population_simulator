@@ -1,41 +1,85 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Sep  4 19:39:23 2016
-
-@author: aeidelman
-
-Premier exemple de génération de population,
-il sert plus de plan pour la suite qu'autre chose
-
-"""
-
+# coding: utf-8
 import numpy as np
-from pandas import DataFrame
+import pandas as pd
 
-class Generator(object):
-    
-    def __init__(self, size):
-        assert isinstance(size, int)
-        self.size = size
-        self.population = DataFrame(index=range(size))
+from make_demo import (generate_SexeAge, generate_Handicap)
+from make_travail import *
+from make_couple import (generate_Couple,
+                        generate_pop_men)
+from make_children import (generate_Children,
+                           add_Children
+                           )                          
+sample_size_target = 50000
 
-       
-    def generate_independant_labelled_columns(self,
-                                              modalites,
-                                              proba):
-        ''' genere une variable 
-            - modalité: liste des modalités
-            - probabilité: liste des proba associés
-        '''
-        assert isinstance(modalites, list)
-        assert isinstance(proba,  list)
-        assert sum(proba) == 1
-        return np.random.choice(modalites,
-                                self.size,
-                                p=proba)
-                                
-if __name__ == '__main__':
-    size_test = 1000
-    test = Generator(size_test)
-    genre = test.generate_independant_labelled_columns(['homme', 'femme'],
-                                                       [0.48,0.52])
+''''
+TABLE INDIVIDUS
+'''
+
+# AgeSexe   
+effectifs_age_sexe = pd.read_csv("data/demographie/pop_age_sexe_2016.csv")
+generation = generate_SexeAge(effectifs_age_sexe, sample_size_target)
+effectifs_age_sexe = generation[1]
+population = generation[0]
+
+sample_size = len(population)
+max_age = effectifs_age_sexe['age'].max()
+
+
+### Activité
+reference_activite = pd.read_csv("data/demographie/activite_2015.csv")   
+population['activite']= generate_Activite(reference_activite, effectifs_age_sexe, population, sample_size)
+
+#Emploi : à partir du taux de chomaĝe
+reference_emploi = pd.read_csv("data/travail/chomage.csv")
+
+
+population['emploi'] = generate_Emploi(reference_emploi, population, max_age)
+
+# Salaire
+reference_salaire = pd.read_csv("data/travail/salaire_brut_horaire.csv")
+#population['salaire'] = add_Salaire_fromINSEE(reference_salaire,population, max_age)
+
+salaire = open_json('data/travail/salaire_sexe_age.json')
+population['salaire'] = add_SalairefromERFS(population, salaire)
+
+
+# Retraite
+reference_retraite = pd.read_csv("data/travail/retraite_2012.csv")
+population['retraite'] = add_Retraite(reference_retraite, population, max_age)
+
+
+#Étudiants
+reference_etudes = pd.read_csv("data/demographie/etudes.csv")
+population['etudes'] = generate_Etudiants(reference_etudes, population)
+# Selon une étude INSEE (2016) -> 23%/
+# http://www.insee.fr/fr/themes/document.asp?reg_id=0&ref_id=ip1603#inter6
+
+#### Handicap
+
+reference_handicap = pd.read_csv("data/demographie/handicap_pop.csv")
+reference_handicap_jeune = pd.read_csv("data/demographie/handicap_pop_jeune.csv")
+population['handicap'] = generate_Handicap(reference_handicap, reference_handicap_jeune, population, effectifs_age_sexe, sample_size)
+
+#### Statut marital
+reference_marital = dict()
+for sexe in ['homme', 'femme']:
+    reference_marital[sexe] = pd.read_csv("data/menages/statut_marital_{0}.csv".format(sexe))
+population['statut_marital'] = generate_Couple(reference_marital.copy(), population)
+
+
+''''
+TABLE MÉNAGE
+'''''
+
+population_menage = generate_pop_men(population[population['age'] >= 15])
+population_menage.reset_index(drop= True, inplace= True)
+
+##### Le fait d'avoir un.des enfant.s
+reference_typefam = pd.read_csv('data/menages/enfants/type_famille.csv')
+population_menage[['type_fam', 'enfant']] = generate_Children(reference_typefam, population_menage)
+
+reference_enfant = pd.read_csv('data/menages/enfants/nbr_enfant.csv')
+population_menage['nb_enf'] = add_Children(reference_enfant, population_menage)
+
+print('Nombre de ménages final :', len(population_menage) )
+#population_menage.to_csv('population_simulated_6310.csv')

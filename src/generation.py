@@ -13,12 +13,7 @@ Son index reprend les colonnes qui seront imputées
 from numpy.testing import assert_almost_equal
 from pandas import Series, DataFrame
 
-
-def complete_input(incomplete_marges):
-    # est-ce utile ? 
-    complete_marges = incomplete_marges
-    return complete_marges
-    
+ 
 
 def check_input_format(marges):
     ''' réalise des tests sur le format utilisé pour la

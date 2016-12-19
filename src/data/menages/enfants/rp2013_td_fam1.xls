@@ -1,0 +1,33 @@
+FAM1 - Nombre de familles selon le type de famille et le nombre d'enfants de moins de 25 ans en 2013
+France
+© Insee
+
+
+FAM1 - Type de famille regroupé
+	Aucun enfant de moins de 25 ans	1 enfant de moins de 25 ans	2 enfants de moins de 25 ans	3 enfants de moins de 25 ans	4 enfants ou plus de moins de 25 ans	Ensemble	
+Couple sans enfant	7 623 887	0	0	0	0	7 623 887	
+Couple avec enfant(s)	540 687	2 790 543	2 938 894	1 069 424	336 473	7 676 021	
+Famille monoparentale composée d'un homme avec enfant(s)	82 422	235 324	110 110	26 948	7 218	462 021	
+Famille monoparentale composée d'une femme avec enfant(s)	417 855	1 001 638	580 945	186 680	72 717	2 259 835	
+Ensemble	8 664 851	4 027 504	3 629 949	1 283 052	416 408	18 021 764	
+
+Source : Insee, RP2013 exploitation complémentaire.
+
+
+FAM1 - Type de famille détaillé
+	Aucun enfant de moins de 25 ans	1 enfant de moins de 25 ans	2 enfants de moins de 25 ans	3 enfants de moins de 25 ans	4 enfants ou plus de moins de 25 ans	Ensemble	
+Famille monoparentale composée d'un homme 'actif ayant un emploi'	20 615	179 279	91 136	21 251	4 563	316 845	
+Famille monoparentale composée d'un homme autre que 'actif ayant un emploi'	61 807	56 045	18 973	5 697	2 655	145 176	
+Famille monoparentale composée d'une femme 'actif ayant un emploi'	88 281	702 231	404 536	103 668	24 710	1 323 427	
+Famille monoparentale composée d'une femme autre que 'actif ayant un emploi'	329 573	299 406	176 409	83 012	48 007	936 407	
+Couple sans enfant composé de deux 'actifs ayant un emploi'	2 178 427	0	0	0	0	2 178 427	
+Couple sans enfant composé d'un seul homme 'actif ayant un emploi'	770 289	0	0	0	0	770 289	
+Couple sans enfant composé d'une seule femme 'actif ayant un emploi'	761 748	0	0	0	0	761 748	
+Couple sans enfant dont aucun des deux membres n'est 'actif ayant un emploi'	3 913 423	0	0	0	0	3 913 423	
+Couple avec enfant(s) composé de deux membres 'actifs ayant un emploi'	119 961	1 890 487	2 183 136	651 821	125 832	4 971 237	
+Couple avec enfant(s) composé d'un seul homme 'actif ayant un emploi'	62 045	458 147	473 032	279 968	134 818	1 408 011	
+Couple avec enfant(s) composé d'une seule femme 'actif ayant un emploi'	73 724	242 812	155 816	57 028	20 309	549 689	
+Couple avec enfant(s) dont aucun des deux membres n'est 'actif ayant un emploi'	284 957	199 097	126 910	80 606	55 514	747 084	
+Ensemble	8 664 851	4 027 504	3 629 949	1 283 052	416 408	18 021 764	
+
+Source : Insee, RP2013 exploitation complémentaire.

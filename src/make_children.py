@@ -12,7 +12,16 @@ from tools import (distance_to_reference, get_proba, get_classes_age,
     from_unique_value_reference_to_standard_reference)
 
 def generate_Children(reference_typefam, population_menage):
-    
+    '''
+    Genere :
+    - la colonne type_fam : 
+        'Couples'
+        'femme solo'
+        'homme solo'
+    - la colonne enfant:
+        0 : pas d'enfant
+        1 : a un/des enfant(s)
+    '''
     reference_typefam = reference_typefam[reference_typefam['type_fam'] != 'Total']
     reference_typefam['effectif'] *= 1000
     reference_typefam.loc[reference_typefam['type_fam'] == 'Couples', 'effectif'] *= 2
@@ -46,6 +55,9 @@ def generate_Children(reference_typefam, population_menage):
     return population_enfant[['type_fam', 'enfant']]
     
 def add_Children(reference_enfant, population_menage):
+    '''
+    Genere le nombre d'enfants (1 a 4)
+    '''
     reference_enfant = pd.melt(reference_enfant, id_vars=['type_fam'], 
                            var_name = 'nb_enf', value_name = 'effectif' )
     
