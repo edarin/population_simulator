@@ -26,7 +26,7 @@ max_age = effectifs_age_sexe['age'].max()
 
 
 ### Activité
-reference_activite = pd.read_csv("data/demographie/activite_2015.csv")   
+reference_activite = pd.read_csv("data/travail/activite_2015.csv")   
 population['activite']= generate_Activite(reference_activite, effectifs_age_sexe, population, sample_size)
 
 #Emploi : à partir du taux de chomaĝe
