@@ -27,9 +27,9 @@ et par simple jeu de calage arriver assez proche de la population mère.
 
 ## Génération
 
-On peut aussi tester une approche très différente. Comme l'on a dès le
+On peut aussi, comme ici, choisir une approche très différente. Comme l'on a dès le
 début toutes les informations nécessaires au niveau agrégé et que nous n'en avons pas d'autres
-contenues dans un échantillon qu'il s'agirait détendre, on peut essayer de générer tout de suite
+contenues dans un échantillon qu'il s'agirait d'étendre, on peut essayer de générer tout de suite
 des individus ayant des caractéristiques tirées de distributions
 statistiques cohérentes.
 
@@ -45,7 +45,7 @@ Si l'on considère que la population ne respecte pas telle ou telle
 caractéristiques, il faut normalement simplement ajouter cette caractéristique
 dans la liste des choses à respecter lors de la génération.
 Grâce à ce procédé itératif, nous aurons normalement une base de plus en plus
-proche de la base réelle.
+proche de la réalité.
 
 # Installation
 
