@@ -70,7 +70,8 @@ def distance_to_reference(population_simulee, reference, sample_size, groupby,
         
     
     ratio['ratio'] = ratio['effectif_genere']/ratio['effectif_theorique']
-
+    ratio['mse'] = (ratio['effectif_genere'] - ratio['effectif_theorique'])^2
+    
     return ratio
 
 
