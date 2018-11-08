@@ -12,7 +12,7 @@ setup(
     # le nom de votre bibliothèque, tel qu'il apparaitre sur pypi
     name='population_simulator',
     # la version du code
-    version='0.0',
+    version='0.1.0',
 
     packages=find_packages(),
 
@@ -29,7 +29,7 @@ setup(
 
     url='https://github.com/edarin/population_simulator',
 
-
+    install_requires=['pandas','numpy',]
     classifiers=[
         "Programming Language :: Python",
         "Development Status :: 1 - Planning",
